@@ -1,3 +1,5 @@
+import createGrid from './createGrid';
+
 export {
-	/* provide the public API here */
+	createGrid
 };
