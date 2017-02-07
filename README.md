@@ -4,13 +4,23 @@
 [![codecov](https://codecov.io/gh/dojo/dgrid/branch/master/graph/badge.svg)](https://codecov.io/gh/dojo/dgrid)
 [![npm version](https://badge.fury.io/js/%40dojo%2Fdgrid.svg)](http://badge.fury.io/js/%40dojo%2Fdgrid)
 
-TODO: Replace with a description of this package
+A reactive grid for Dojo 2 built using [(@dojo/widget-core)](https://github.com/dojo/widget-core).
+
+**WARNING** This is *alpha* software. It is not yet production ready, so you should use at your own risk.
+
+- [Features](#features)
+- [Usage](#usage)
+- [How Do I Contribute?](#how-do-i-contribute)
+    - [Testing](#testing)
+- [Licensing Information](#licensing-information)
 
 ## Features
 
-TODO: Add sections on features of this package
+- Column configuration
+- Array-backed data
+- Sorting
 
-## How do I use this package?
+## Usage
 
 TODO: Add appropriate usage and instruction guidelines
 
