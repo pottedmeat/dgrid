@@ -1,7 +1,9 @@
 {
-	"version": "2.1.5",
+	"version": "2.2.0",
 	"compilerOptions": {
 		"declaration": false,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
 		"module": "umd",
 		"moduleResolution": "node",
 		"noImplicitAny": true,
@@ -10,23 +12,12 @@
 		"removeComments": false,
 		"sourceMap": true,
 		"strictNullChecks": true,
-		"target": "es5",
-		"lib": [
-			"dom",
-			"es5",
-			"es2015.iterable",
-			"es2015.symbol",
-			"es2015.symbol.wellknown"
-		]
+		"target": "es5"
 	},
 	"include": [
 		"./src/**/*.ts",
+		"./src/examples/**/*.ts",
 		"./tests/**/*.ts",
 		"./typings/index.d.ts"
-	],
-	"exclude": [
-		"_build",
-		"dist",
-		"node_modules"
 	]
 }

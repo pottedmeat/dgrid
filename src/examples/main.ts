@@ -1,6 +1,10 @@
-import createProjectorMixin from '@dojo/widget-core/mixins/createProjectorMixin';
-import createGrid from '../createGrid';
-import createArrayDataProvider from '../createArrayDataProvider';
+import { ProjectorMixin } from '@dojo/widget-core/mixins/Projector';
+import Grid from '../Grid';
+import ArrayDataProvider from '../providers/ArrayDataProvider';
+import { WidgetBase } from '@dojo/widget-core/WidgetBase';
+import { WidgetProperties } from '@dojo/widget-core/interfaces';
+import { w } from '@dojo/widget-core/d';
+import { GridProperties } from '../Grid';
 
 const data = [
 	{ order: 1, name: 'preheat', description: 'Preheat your oven to 350F' },
@@ -14,7 +18,7 @@ const data = [
 	{ order: 9, name: 'eat', description: 'Eat and enjoy!' }
 ];
 
-const dataProvider = createArrayDataProvider({
+const dataProvider = new ArrayDataProvider({
 	idProperty: 'order',
 	data
 });
@@ -34,11 +38,15 @@ const columns = [
 	}
 ];
 
-const dgrid = createGrid.mixin(createProjectorMixin)({
-	properties: {
-		data: dataProvider,
-		columns: columns
+class Projector extends ProjectorMixin(WidgetBase)<WidgetProperties> {
+	render() {
+		return w(Grid, <GridProperties> {
+			dataProvider,
+			columns
+		});
 	}
-});
+}
 
-dgrid.append();
+const projector = new Projector();
+
+projector.append();

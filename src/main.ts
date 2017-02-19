@@ -1,5 +1,5 @@
-import createGrid from './createGrid';
+import Grid from './Grid';
 
 export {
-	createGrid
+	Grid
 };
