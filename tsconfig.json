@@ -19,5 +19,10 @@
 		"./src/examples/**/*.ts",
 		"./tests/**/*.ts",
 		"./typings/index.d.ts"
+	],
+	"exclude": [
+		"_build",
+		"dist",
+		"node_modules"
 	]
 }
