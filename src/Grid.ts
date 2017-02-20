@@ -1,5 +1,5 @@
 import WidgetBase from '@dojo/widget-core/WidgetBase';
-import { WidgetProperties } from '@dojo/widget-core/interfaces';
+import { WidgetProperties, PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { v, w } from '@dojo/widget-core/d';
 import FactoryRegistry from '@dojo/widget-core/FactoryRegistry';
 import Header from './Header';
@@ -11,9 +11,11 @@ import { DataProperties, HasColumns } from './interfaces';
 import DataProviderBase, { Options } from './bases/DataProviderBase';
 import { HeaderProperties } from './Header';
 import { BodyProperties } from './Body';
-
-import * as baseClasses from './styles/grid.css';
 import { theme, ThemeableMixin } from '@dojo/widget-core/mixins/Themeable';
+import { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
+import { includes } from '@dojo/shim/array';
+
+import * as gridClasses from './styles/grid.css';
 
 /**
  * @type GridProperties
@@ -24,16 +26,16 @@ import { theme, ThemeableMixin } from '@dojo/widget-core/mixins/Themeable';
  * @property columns		Column definitions
  */
 export interface GridProperties extends WidgetProperties, HasColumns {
+	registry?: FactoryRegistry;
 	dataProvider: DataProviderBase<any, Options>;
 }
 
-@theme(baseClasses)
+@theme(gridClasses)
 class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 	data: DataProperties<any>;
 
 	constructor() {
 		super();
-		const { dataProvider } = this.properties;
 
 		const registry = this.registry = new FactoryRegistry();
 		registry.define('header', Header);
@@ -41,8 +43,15 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 		registry.define('body', Body);
 		registry.define('row', Row);
 		registry.define('cell', Cell);
+	}
 
-		if (dataProvider) {
+	@onPropertiesChanged
+	myPropChangedListener(evt: PropertiesChangeEvent<this, GridProperties>) {
+		const {
+			dataProvider
+		} = evt.properties;
+
+		if (includes(evt.changedPropertyKeys, 'dataProvider')) {
 			dataProvider.observe().subscribe((data) => {
 				this.data = data;
 				this.invalidate();
@@ -66,8 +75,8 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 			sort: onSortRequest
 		} = dataProvider;
 
-		return v('div.dgrid.dgrid-grid', {
-			classes: this.classes(baseClasses.grid).get(),
+		return v('div', {
+			classes: this.classes(gridClasses.grid).get(),
 			role: 'grid'
 		}, [
 			w('header', <HeaderProperties> {

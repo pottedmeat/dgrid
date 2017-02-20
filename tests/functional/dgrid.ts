@@ -1,10 +1,14 @@
-import createProjectorMixin from '@dojo/widget-core/mixins/createProjectorMixin';
 import uuid from '@dojo/core/uuid';
-import createGrid from './../../src/createGrid';
-import createArrayDataProvider from '../../src/createArrayDataProvider';
-import { ItemProperties } from '../../src/createGrid';
+import ArrayDataProvider from '../../src/providers/ArrayDataProvider';
+import { ItemProperties } from '../../src/interfaces';
+import { ProjectorMixin } from '@dojo/widget-core/mixins/Projector';
+import { WidgetBase } from '@dojo/widget-core/WidgetBase';
+import { w } from '@dojo/widget-core/d';
+import Grid from '../../src/Grid';
+import { GridProperties } from '../../src/Grid';
+import { WidgetProperties } from '@dojo/widget-core/interfaces';
 
-const dataProvider = createArrayDataProvider({
+const dataProvider = new ArrayDataProvider({
 	data: [
 		{ id: uuid(), age: 1, gender: 'A', location: 'Out' },
 		{ id: uuid(), age: 1, gender: 'B', location: 'Out' },
@@ -86,11 +90,15 @@ const columns = [
 	}
 ];
 
-const dgrid = createGrid.mixin(createProjectorMixin)({
-	properties: {
-		data: dataProvider,
-		columns
+class Projector extends ProjectorMixin(WidgetBase)<WidgetProperties> {
+	render() {
+		return w(Grid, <GridProperties> {
+			dataProvider,
+			columns
+		});
 	}
-});
+}
 
-dgrid.append();
+const projector = new Projector();
+
+projector.append();

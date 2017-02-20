@@ -47,7 +47,10 @@ class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<
 		}
 		const itemProperties = expand(items, idProperty);
 		return {
-			sort: sort,
+			sort: sort.map((sortDetail) => {
+				sortDetail.descending = Boolean(sortDetail.descending);
+				return sortDetail;
+			}),
 			items: itemProperties
 		};
 	}

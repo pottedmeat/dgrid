@@ -4,10 +4,14 @@ import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins
 import { v, w } from '@dojo/widget-core/d';
 import { HasColumns, HasItems } from './interfaces';
 import { RowProperties } from './Row';
+import * as bodyClasses from './styles/body.css';
+
+import { ThemeableMixin, theme } from '@dojo/widget-core/mixins/Themeable';
 
 export interface BodyProperties extends WidgetProperties, HasColumns, HasItems, RegistryMixinProperties { }
 
-class Body extends RegistryMixin(WidgetBase)<BodyProperties> {
+@theme(bodyClasses)
+class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 	render() {
 		const {
 			items,
@@ -15,16 +19,23 @@ class Body extends RegistryMixin(WidgetBase)<BodyProperties> {
 			registry
 		} = this.properties;
 
-		return v('div.dgrid-scroller', [
-			v('div.dgrid-content', items.map((item) => {
-				return w('row', <RowProperties> {
-					key: item.id,
-					item,
-					columns,
-					registry
-				});
-			}))
-		]);
+		return v('div', {
+				classes: this.classes(bodyClasses.scroller).get()
+			},
+			[
+				v('div', {
+					classes: this.classes(bodyClasses.content).get()
+				},
+				items.map((item) => {
+					return w('row', <RowProperties> {
+						key: item.id,
+						item,
+						columns,
+						registry
+					});
+				}))
+			]
+		);
 	}
 }
 

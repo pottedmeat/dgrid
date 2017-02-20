@@ -4,12 +4,16 @@ import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins
 import { v, w } from '@dojo/widget-core/d';
 import { HasColumns } from './interfaces';
 import { CellProperties } from './Cell';
+import { theme, ThemeableMixin } from '@dojo/widget-core/mixins/Themeable';
+
+import * as rowClasses from './styles/row.css';
 
 export interface RowProperties extends WidgetProperties, HasColumns, RegistryMixinProperties {
 	item: any;
 }
 
-class Row  extends RegistryMixin(WidgetBase)<RowProperties> {
+@theme(rowClasses)
+class Row  extends ThemeableMixin(RegistryMixin(WidgetBase))<RowProperties> {
 	render() {
 		const {
 			registry,
@@ -17,11 +21,13 @@ class Row  extends RegistryMixin(WidgetBase)<RowProperties> {
 			columns = []
 		} = this.properties;
 
-		return v('div.dgrid-row', {
-			role: 'row'
+		return v('div', {
+			role: 'row',
+			classes: this.classes(rowClasses.row).get()
 		}, [
-			v('table.dgrid-row-table', {
-				role: 'presentation'
+			v('table', {
+				role: 'presentation',
+				classes: this.classes(rowClasses.rowTable).get()
 			}, [
 				v('tr', columns.map(({ id, field, cellRenderer }) => {
 					return w('cell', <CellProperties> {

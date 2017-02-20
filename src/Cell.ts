@@ -3,10 +3,14 @@ import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { RegistryMixin, RegistryMixinProperties }  from '@dojo/widget-core/mixins/Registry';
 import { v, w } from '@dojo/widget-core/d';
 import { HasValue, HasColumn, HasItem, HasCellRenderer, CellRendererProperties } from './interfaces';
+import { theme, ThemeableMixin } from '@dojo/widget-core/mixins/Themeable';
+
+import * as cellClasses from './styles/cell.css';
 
 export interface CellProperties extends WidgetProperties, HasValue, HasColumn, HasItem, HasCellRenderer<any>, RegistryMixinProperties { }
 
-class Cell extends RegistryMixin(WidgetBase)<CellProperties> {
+@theme(cellClasses)
+class Cell extends ThemeableMixin(RegistryMixin(WidgetBase))<CellProperties> {
 	render() {
 		const {
 			value = '',
@@ -16,8 +20,9 @@ class Cell extends RegistryMixin(WidgetBase)<CellProperties> {
 			registry
 		} = this.properties;
 
-		return v('td.dgrid-cell', {
-			role: 'gridcell'
+		return v('td', {
+			role: 'gridcell',
+			classes: this.classes(cellClasses.cell).get()
 		}, [
 			cellRenderer ? w(cellRenderer(item), <CellRendererProperties> {
 				value,

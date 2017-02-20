@@ -1,12 +1,12 @@
 import * as registerSuite from 'intern/lib/interfaces/object';
 import { assert } from 'chai';
-import createArrayDataProvider from '../../src/createArrayDataProvider';
-import { DataProperties } from '../../src/createGrid';
+import ArrayDataProvider from '../../src/providers/ArrayDataProvider';
+import { DataProperties } from '../../src/interfaces';
 
 registerSuite({
-	name: 'createArrayDataProvider',
+	name: 'ArrayDataProvider',
 	'default ascending'() {
-		const dataProvider = createArrayDataProvider({
+		const dataProvider = new ArrayDataProvider({
 			data: [
 				{ id: 1 },
 				{ id: 3 },
@@ -16,14 +16,14 @@ registerSuite({
 				{ id: 1 }
 			]
 		});
-		let data: DataProperties = { items: [] };
+		let data: DataProperties<any> = { items: [] };
 		const subscription = dataProvider.observe().subscribe((updated) => {
 			data = updated;
 		});
-		dataProvider.onSortRequest({ columnId: 'id' });
+		dataProvider.sort({ columnId: 'id' });
 
 		assert.deepEqual(data, {
-			sortDetails: [ { columnId: 'id', descending: false } ],
+			sort: [ { columnId: 'id', descending: false } ],
 			items: [
 				{ id: 1, data: { id: 1 } },
 				{ id: 1, data: { id: 1 } },
@@ -37,7 +37,7 @@ registerSuite({
 		subscription.unsubscribe();
 	},
 	'ascending'() {
-		const dataProvider = createArrayDataProvider({
+		const dataProvider = new ArrayDataProvider({
 			data: [
 				{ id: 1 },
 				{ id: 1 },
@@ -47,14 +47,14 @@ registerSuite({
 				{ id: 4 }
 			]
 		});
-		let data: DataProperties = { items: [] };
+		let data: DataProperties<any> = { items: [] };
 		const subscription = dataProvider.observe().subscribe((updated) => {
 			data = updated;
 		});
-		dataProvider.onSortRequest({ columnId: 'id', descending: false });
+		dataProvider.sort({ columnId: 'id', descending: false });
 
 		assert.deepEqual(data, {
-			sortDetails: [ { columnId: 'id', descending: false } ],
+			sort: [ { columnId: 'id', descending: false } ],
 			items: [
 				{ id: 1, data: { id: 1 } },
 				{ id: 1, data: { id: 1 } },
@@ -68,7 +68,7 @@ registerSuite({
 		subscription.unsubscribe();
 	},
 	'descending'() {
-		const dataProvider = createArrayDataProvider({
+		const dataProvider = new ArrayDataProvider({
 			data: [
 				{ id: 1 },
 				{ id: 1 },
@@ -78,14 +78,14 @@ registerSuite({
 				{ id: 4 }
 			]
 		});
-		let data: DataProperties = { items: [] };
+		let data: DataProperties<any> = { items: [] };
 		const subscription = dataProvider.observe().subscribe((updated) => {
 			data = updated;
 		});
-		dataProvider.onSortRequest({ columnId: 'id', descending: true });
+		dataProvider.sort({ columnId: 'id', descending: true });
 
 		assert.deepEqual(data, {
-			sortDetails: [ { columnId: 'id', descending: true } ],
+			sort: [ { columnId: 'id', descending: true } ],
 			items: [
 				{ id: 5, data: { id: 5 } },
 				{ id: 4, data: { id: 4 } },

@@ -1,18 +1,7 @@
 .grid {
     position: relative;
-    overflow: hidden;
+    overflow: hidden;  /* This is needed by IE to prevent crazy scrollbar flashing */
     border: 1px solid #ddd;
     height: 30em;
     display: block;
-}
-
-.header, .headerRow, .footer {
-    overflow: hidden;
-    background-color: #eee;
-}
-
-.headerRow {
-    position: absolute;
-    right: 17px;
-    left: 0;
 }

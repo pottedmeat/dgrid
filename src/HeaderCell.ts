@@ -3,10 +3,14 @@ import { RegistryMixin } from '@dojo/widget-core/mixins/Registry';
 import { v } from '@dojo/widget-core/d';
 import { WidgetProperties } from '@dojo/widget-core/interfaces';
 import { HasColumn, HasSortDetail, HasSortEvent } from './interfaces';
+import { ThemeableMixin, theme } from '@dojo/widget-core/mixins/Themeable';
+
+import * as headerCellClasses from './styles/headerCell.css';
 
 export interface HeaderCellProperties extends WidgetProperties, HasColumn, HasSortDetail, HasSortEvent { }
 
-class HeaderCell extends RegistryMixin(WidgetBase)<HeaderCellProperties> {
+@theme(headerCellClasses)
+class HeaderCell extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderCellProperties> {
 	onSortRequest(): void {
 		const {
 			key = '',
@@ -30,16 +34,32 @@ class HeaderCell extends RegistryMixin(WidgetBase)<HeaderCellProperties> {
 			sortDetail
 		} = this.properties;
 
-		return v('th.dgrid-cell', {
+		const classes = [ headerCellClasses.cell ];
+		if (column.sortable !== false) {
+			classes.push(headerCellClasses.sortable);
+		}
+
+		const sortClasses: string[] = [];
+		if (sortDetail) {
+			sortClasses.push(headerCellClasses.sortArrow);
+			if (sortDetail.descending) {
+				sortClasses.push(headerCellClasses.sortArrowDown);
+			}
+			else {
+				sortClasses.push(headerCellClasses.sortArrowUp);
+			}
+		}
+
+		return v('th', {
 			role: 'columnheader',
 			onclick: this.onSortRequest,
-			classes: {
-				'dgrid-sort-up': Boolean(sortDetail && !sortDetail.descending),
-				'dgrid-sort-down': Boolean(sortDetail && sortDetail.descending)
-			}
+			classes: this.classes(...classes).get()
 		}, [
 			v('span', [ column.label || column.id ]),
-			sortDetail && sortDetail.columnId === key ? v('div.dgrid-sort-arrow.ui-icon', { role: 'presentation' }) : null
+			sortDetail && sortDetail.columnId === key ? v('div.dgrid-sort-arrow.ui-icon', {
+				role: 'presentation',
+				classes: this.classes(...sortClasses).get()
+			}) : null
 		]);
 	}
 }

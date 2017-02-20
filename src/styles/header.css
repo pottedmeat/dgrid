@@ -1,0 +1,13 @@
+.header {
+    background-color: #eee;
+}
+
+.row {
+    position: absolute;
+    right: 17px; /* scrollbar width; revised manually if necessary */
+    left: 0;
+}
+
+.rowTable {
+    composes: rowTable from './shared/rowTable.css';
+}
