@@ -20,11 +20,11 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 		} = this.properties;
 
 		return v('div', {
-				classes: this.classes(bodyClasses.scroller).get()
+				classes: this.classes(bodyClasses.scroller)
 			},
 			[
 				v('div', {
-					classes: this.classes(bodyClasses.content).get()
+					classes: this.classes(bodyClasses.content)
 				},
 				items.map((item) => {
 					return w('row', <RowProperties> {

@@ -16,6 +16,7 @@ import { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import { includes } from '@dojo/shim/array';
 
 import * as gridClasses from './styles/grid.css';
+import { Subscription } from '@dojo/shim/Observable';
 
 /**
  * @type GridProperties
@@ -32,7 +33,8 @@ export interface GridProperties extends WidgetProperties, HasColumns {
 
 @theme(gridClasses)
 class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
-	data: DataProperties<any>;
+	private data: DataProperties<any>;
+	private subscription: Subscription;
 
 	constructor() {
 		super();
@@ -52,7 +54,11 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 		} = evt.properties;
 
 		if (includes(evt.changedPropertyKeys, 'dataProvider')) {
-			dataProvider.observe().subscribe((data) => {
+			if (this.subscription) {
+				this.subscription.unsubscribe();
+			}
+
+			this.subscription = dataProvider.observe().subscribe((data) => {
 				this.data = data;
 				this.invalidate();
 			});
@@ -76,7 +82,7 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 		} = dataProvider;
 
 		return v('div', {
-			classes: this.classes(gridClasses.grid).get(),
+			classes: this.classes(gridClasses.grid),
 			role: 'grid'
 		}, [
 			w('header', <HeaderProperties> {

@@ -20,12 +20,12 @@ class Header extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderProperties>
 		} = this.properties;
 
 		return v('div', {
-			classes: this.classes(headerClasses.header, headerClasses.row).get(),
+			classes: this.classes(headerClasses.header, headerClasses.row),
 			role: 'row'
 		}, [
 			v('table', {
 				role: 'presentation',
-				classes: this.classes(headerClasses.rowTable).get()
+				classes: this.classes(headerClasses.rowTable)
 			}, [
 				v('tr', columns.map((column) => {
 					let sortDetail;

@@ -22,7 +22,7 @@ class Cell extends ThemeableMixin(RegistryMixin(WidgetBase))<CellProperties> {
 
 		return v('td', {
 			role: 'gridcell',
-			classes: this.classes(cellClasses.cell).get()
+			classes: this.classes(cellClasses.cell)
 		}, [
 			cellRenderer ? w(cellRenderer(item), <CellRendererProperties> {
 				value,

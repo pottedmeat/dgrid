@@ -53,12 +53,12 @@ class HeaderCell extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderCellPro
 		return v('th', {
 			role: 'columnheader',
 			onclick: this.onSortRequest,
-			classes: this.classes(...classes).get()
+			classes: this.classes(...classes)
 		}, [
 			v('span', [ column.label || column.id ]),
 			sortDetail && sortDetail.columnId === key ? v('div.dgrid-sort-arrow.ui-icon', {
 				role: 'presentation',
-				classes: this.classes(...sortClasses).get()
+				classes: this.classes(...sortClasses)
 			}) : null
 		]);
 	}
