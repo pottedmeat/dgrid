@@ -1,14 +1,13 @@
-import { WidgetProperties } from '@dojo/widget-core/interfaces';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import { v, w } from '@dojo/widget-core/d';
 import { HasColumns, HasItems } from './interfaces';
 import { RowProperties } from './Row';
+import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
+
 import * as bodyClasses from './styles/body.css';
 
-import { ThemeableMixin, theme } from '@dojo/widget-core/mixins/Themeable';
-
-export interface BodyProperties extends WidgetProperties, HasColumns, HasItems, RegistryMixinProperties { }
+export interface BodyProperties extends ThemeableProperties, HasColumns, HasItems, RegistryMixinProperties { }
 
 @theme(bodyClasses)
 class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
@@ -16,7 +15,8 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 		const {
 			items,
 			columns,
-			registry
+			registry,
+			theme
 		} = this.properties;
 
 		return v('div', {
@@ -31,7 +31,8 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 						key: item.id,
 						item,
 						columns,
-						registry
+						registry,
+						theme
 					});
 				}))
 			]

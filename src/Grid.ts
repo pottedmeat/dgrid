@@ -1,5 +1,5 @@
 import WidgetBase from '@dojo/widget-core/WidgetBase';
-import { WidgetProperties, PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
+import { PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { v, w } from '@dojo/widget-core/d';
 import FactoryRegistry from '@dojo/widget-core/FactoryRegistry';
 import Header from './Header';
@@ -11,12 +11,12 @@ import { DataProperties, HasColumns } from './interfaces';
 import DataProviderBase, { Options } from './bases/DataProviderBase';
 import { HeaderProperties } from './Header';
 import { BodyProperties } from './Body';
-import { theme, ThemeableMixin } from '@dojo/widget-core/mixins/Themeable';
+import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import { includes } from '@dojo/shim/array';
+import { Subscription } from '@dojo/shim/Observable';
 
 import * as gridClasses from './styles/grid.css';
-import { Subscription } from '@dojo/shim/Observable';
 
 /**
  * @type GridProperties
@@ -26,7 +26,7 @@ import { Subscription } from '@dojo/shim/Observable';
  * @property dataProvider	An observable object that responds to events and returns DataProperties
  * @property columns		Column definitions
  */
-export interface GridProperties extends WidgetProperties, HasColumns {
+export interface GridProperties extends ThemeableProperties, HasColumns {
 	registry?: FactoryRegistry;
 	dataProvider: DataProviderBase<any, Options>;
 }
@@ -36,21 +36,11 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 	private data: DataProperties<any>;
 	private subscription: Subscription;
 
-	constructor() {
-		super();
-
-		const registry = this.registry = new FactoryRegistry();
-		registry.define('header', Header);
-		registry.define('header-cell', HeaderCell);
-		registry.define('body', Body);
-		registry.define('row', Row);
-		registry.define('cell', Cell);
-	}
-
 	@onPropertiesChanged
-	myPropChangedListener(evt: PropertiesChangeEvent<this, GridProperties>) {
-		const {
-			dataProvider
+	protected onPropertiesChanged(evt: PropertiesChangeEvent<this, GridProperties>) {
+		let {
+			dataProvider,
+			registry
 		} = evt.properties;
 
 		if (includes(evt.changedPropertyKeys, 'dataProvider')) {
@@ -63,6 +53,15 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 				this.invalidate();
 			});
 		}
+
+		if (includes(evt.changedPropertyKeys, 'registry')) {
+			this.registry = new FactoryRegistry();
+			this.registry.define('header', (registry && registry.get('header')) || Header);
+			this.registry.define('header-cell', (registry && registry.get('header-cell')) || HeaderCell);
+			this.registry.define('body', (registry && registry.get('body')) || Body);
+			this.registry.define('row', (registry && registry.get('row')) || Row);
+			this.registry.define('cell', (registry && registry.get('cell')) || Cell);
+		}
 	}
 
 	render() {
@@ -73,6 +72,7 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 				sort = []
 			} = {},
 			properties: {
+				theme,
 				columns,
 				dataProvider
 			}
@@ -87,12 +87,14 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 		}, [
 			w('header', <HeaderProperties> {
 				registry,
+				theme,
 				columns,
 				sortDetails: sort,
 				onSortRequest: onSortRequest && onSortRequest.bind(dataProvider)
 			}),
 			w('body', <BodyProperties> {
 				registry,
+				theme,
 				columns,
 				items
 			})

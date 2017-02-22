@@ -97,5 +97,36 @@ registerSuite({
 		});
 
 		subscription.unsubscribe();
+	},
+	'configure'() {
+		const dataProvider = new ArrayDataProvider({
+			data: [
+				{ id: 1 },
+				{ id: 1 },
+				{ id: 3 },
+				{ id: 5 },
+				{ id: 2 },
+				{ id: 4 }
+			]
+		});
+		let data: DataProperties<any> = { items: [] };
+		const subscription = dataProvider.observe().subscribe((updated) => {
+			data = updated;
+		});
+		dataProvider.configure({ sort: { columnId: 'id', descending: false } });
+
+		assert.deepEqual(data, {
+			sort: [ { columnId: 'id', descending: false } ],
+			items: [
+				{ id: 1, data: { id: 1 } },
+				{ id: 1, data: { id: 1 } },
+				{ id: 2, data: { id: 2 } },
+				{ id: 3, data: { id: 3 } },
+				{ id: 4, data: { id: 4 } },
+				{ id: 5, data: { id: 5 } }
+			]
+		});
+
+		subscription.unsubscribe();
 	}
 });

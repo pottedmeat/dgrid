@@ -47,7 +47,10 @@ class DataProviderBase<T, O extends Options> {
 	}
 
 	sort(sort: SortDetails | SortDetails[]) {
-		this.state.sort = Array.isArray(sort) ? sort : [ sort ];
+		this.state.sort = (Array.isArray(sort) ? sort : [ sort ]).map((sortDetail) => {
+			sortDetail.descending = Boolean(sortDetail.descending);
+			return sortDetail;
+		});
 		this.updateData();
 	}
 

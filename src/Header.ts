@@ -1,14 +1,13 @@
 import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { RegistryMixin, RegistryMixinProperties }  from '@dojo/widget-core/mixins/Registry';
 import { v, w } from '@dojo/widget-core/d';
-import { WidgetProperties } from '@dojo/widget-core/interfaces';
 import { HasColumns, HasSortDetails, HasSortEvent } from './interfaces';
 import { HeaderCellProperties } from './HeaderCell';
-import { ThemeableMixin, theme } from '@dojo/widget-core/mixins/Themeable';
+import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 
 import * as headerClasses from './styles/header.css';
 
-export interface HeaderProperties extends WidgetProperties, HasColumns, HasSortDetails, HasSortEvent, RegistryMixinProperties { }
+export interface HeaderProperties extends ThemeableProperties, HasColumns, HasSortDetails, HasSortEvent, RegistryMixinProperties { }
 
 @theme(headerClasses)
 class Header extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderProperties> {
@@ -16,7 +15,9 @@ class Header extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderProperties>
 		const {
 			onSortRequest,
 			columns,
-			sortDetails = []
+			sortDetails = [],
+			registry,
+			theme
 		} = this.properties;
 
 		return v('div', {
@@ -40,7 +41,9 @@ class Header extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderProperties>
 						key: column.id,
 						column,
 						sortDetail,
-						onSortRequest
+						onSortRequest,
+						registry,
+						theme
 					});
 				}))
 			])

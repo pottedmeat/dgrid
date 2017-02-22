@@ -1,13 +1,12 @@
 import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { RegistryMixin } from '@dojo/widget-core/mixins/Registry';
 import { v } from '@dojo/widget-core/d';
-import { WidgetProperties } from '@dojo/widget-core/interfaces';
 import { HasColumn, HasSortDetail, HasSortEvent } from './interfaces';
-import { ThemeableMixin, theme } from '@dojo/widget-core/mixins/Themeable';
+import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 
 import * as headerCellClasses from './styles/headerCell.css';
 
-export interface HeaderCellProperties extends WidgetProperties, HasColumn, HasSortDetail, HasSortEvent { }
+export interface HeaderCellProperties extends ThemeableProperties, HasColumn, HasSortDetail, HasSortEvent { }
 
 @theme(headerCellClasses)
 class HeaderCell extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderCellProperties> {
@@ -56,7 +55,7 @@ class HeaderCell extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderCellPro
 			classes: this.classes(...classes)
 		}, [
 			v('span', [ column.label || column.id ]),
-			sortDetail && sortDetail.columnId === key ? v('div.dgrid-sort-arrow.ui-icon', {
+			sortDetail && sortDetail.columnId === key ? v('div', {
 				role: 'presentation',
 				classes: this.classes(...sortClasses)
 			}) : null
