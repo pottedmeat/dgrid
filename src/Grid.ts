@@ -31,10 +31,26 @@ export interface GridProperties extends ThemeableProperties, HasColumns {
 	dataProvider: DataProviderBase<any, Options>;
 }
 
+function createRegistry(partialRegistry?: FactoryRegistry) {
+	const registry = new FactoryRegistry();
+	registry.define('header', (partialRegistry && partialRegistry.get('header')) || Header);
+	registry.define('header-cell', (partialRegistry && partialRegistry.get('header-cell')) || HeaderCell);
+	registry.define('body', (partialRegistry && partialRegistry.get('body')) || Body);
+	registry.define('row', (partialRegistry && partialRegistry.get('row')) || Row);
+	registry.define('cell', (partialRegistry && partialRegistry.get('cell')) || Cell);
+	return registry;
+}
+
 @theme(gridClasses)
 class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 	private data: DataProperties<any>;
 	private subscription: Subscription;
+
+	constructor() {
+		super();
+
+		this.registry = createRegistry();
+	}
 
 	@onPropertiesChanged
 	protected onPropertiesChanged(evt: PropertiesChangeEvent<this, GridProperties>) {
@@ -55,12 +71,7 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 		}
 
 		if (includes(evt.changedPropertyKeys, 'registry')) {
-			this.registry = new FactoryRegistry();
-			this.registry.define('header', (registry && registry.get('header')) || Header);
-			this.registry.define('header-cell', (registry && registry.get('header-cell')) || HeaderCell);
-			this.registry.define('body', (registry && registry.get('body')) || Body);
-			this.registry.define('row', (registry && registry.get('row')) || Row);
-			this.registry.define('cell', (registry && registry.get('cell')) || Cell);
+			this.registry = createRegistry(registry);
 		}
 	}
 
