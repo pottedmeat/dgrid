@@ -1,4 +1,3 @@
-import './main';
 import './ArrayDataProvider';
 import './Grid';
 import './Header';
