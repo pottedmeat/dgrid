@@ -112,6 +112,7 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 			};
 		}
 		else {
+			measured.element = element;
 			measured.height = element.offsetHeight;
 		}
 		this.itemElementMap.set(key, measured);
