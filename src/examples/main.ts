@@ -18,9 +18,19 @@ const data = [
 	{ order: 9, name: 'eat', description: 'Eat and enjoy!' }
 ];
 
+const instructions: any[] = [];
+for (let i = 1; i <= 1000; i++) {
+	const instruction = Object.create(data[Math.floor(Math.random() * data.length)]);
+	instruction.order = i;
+	instructions.push(instruction);
+}
+
 const dataProvider = new ArrayDataProvider({
 	idProperty: 'order',
-	data
+	data: instructions,
+	configuration: {
+		range: { start: 0, count: 100 }
+	}
 });
 
 const columns = [

@@ -1,21 +1,19 @@
-import { v, w } from '@dojo/widget-core/d';
 import { WidgetProperties } from '@dojo/widget-core/interfaces';
-import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
-import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
+import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
+import { v, w } from '@dojo/widget-core/d';
+import { HasColumns } from './interfaces';
 import { CellProperties } from './Cell';
-import { HasColumns, ItemProperties } from './interfaces';
+import { theme, ThemeableMixin } from '@dojo/widget-core/mixins/Themeable';
 
 import * as rowClasses from './styles/row.css';
 
-export const RowBase = ThemeableMixin(RegistryMixin(WidgetBase));
-
-export interface RowProperties extends WidgetProperties, HasColumns, RegistryMixinProperties, ThemeableProperties {
-	item: ItemProperties<any>;
+export interface RowProperties extends WidgetProperties, HasColumns, RegistryMixinProperties {
+	item: any;
 }
 
 @theme(rowClasses)
-class Row extends RowBase<RowProperties> {
+class Row  extends ThemeableMixin(RegistryMixin(WidgetBase))<RowProperties> {
 	render() {
 		const {
 			registry,
@@ -23,26 +21,19 @@ class Row extends RowBase<RowProperties> {
 			columns = []
 		} = this.properties;
 
-		return v('div', {
-			role: 'row',
-			classes: this.classes(rowClasses.row)
+		return v('table', {
+			role: 'presentation',
+			classes: this.classes(rowClasses.rowTable)
 		}, [
-			v('table', {
-				role: 'presentation',
-				classes: this.classes(rowClasses.rowTable)
-			}, [
-				v('tr', columns.map((column) => {
-					const { id, field } = column;
-
-					return w<CellProperties>('cell', {
-						registry,
-						key: id,
-						column,
-						item,
-						value: item.data[ field || id ]
-					});
-				}))
-			])
+			v('tr', columns.map(({ id, field, cellRenderer }) => {
+				return w('cell', <CellProperties> {
+					registry,
+					key: id,
+					item: item,
+					value: item.data[ field || id ],
+					cellRenderer
+				});
+			}))
 		]);
 	}
 }
