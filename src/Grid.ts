@@ -80,7 +80,9 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 			registry,
 			data: {
 				items = [],
-				sort = []
+				sort = [],
+				offset = -1,
+				totalLength = -1
 			} = {},
 			properties: {
 				theme,
@@ -89,6 +91,7 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 			}
 		} = this;
 		const {
+			range: onRangeRequest,
 			sort: onSortRequest
 		} = dataProvider;
 
@@ -107,7 +110,10 @@ class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
 				registry,
 				theme,
 				columns,
-				items
+				items,
+				offset,
+				totalLength,
+				onRangeRequest: onRangeRequest && onRangeRequest.bind(dataProvider)
 			})
 		]);
 	}

@@ -21,24 +21,19 @@ class Row  extends ThemeableMixin(RegistryMixin(WidgetBase))<RowProperties> {
 			columns = []
 		} = this.properties;
 
-		return v('div', {
-			role: 'row',
-			classes: this.classes(rowClasses.row)
+		return v('table', {
+			role: 'presentation',
+			classes: this.classes(rowClasses.rowTable)
 		}, [
-			v('table', {
-				role: 'presentation',
-				classes: this.classes(rowClasses.rowTable)
-			}, [
-				v('tr', columns.map(({ id, field, cellRenderer }) => {
-					return w('cell', <CellProperties> {
-						registry,
-						key: id,
-						item: item,
-						value: item.data[ field || id ],
-						cellRenderer
-					});
-				}))
-			])
+			v('tr', columns.map(({ id, field, cellRenderer }) => {
+				return w('cell', <CellProperties> {
+					registry,
+					key: id,
+					item: item,
+					value: item.data[ field || id ],
+					cellRenderer
+				});
+			}))
 		]);
 	}
 }

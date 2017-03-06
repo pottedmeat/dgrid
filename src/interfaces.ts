@@ -1,6 +1,11 @@
 import { WidgetProperties, WidgetBaseConstructor } from '@dojo/widget-core/interfaces';
 import { RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 
+export interface RangeDetails {
+	start: number;
+	count: number;
+}
+
 export interface SortDetails {
 	columnId: string;
 	descending?: boolean;
@@ -14,6 +19,8 @@ export interface ItemProperties<T> {
 export interface DataProperties<T> {
 	items: ItemProperties<T>[];
 	sort?: SortDetails[];
+	offset?: number;
+	totalLength?: number;
 }
 
 export interface CellRendererProperties extends WidgetProperties, HasValue, HasColumn, HasItem, RegistryMixinProperties { }
@@ -59,4 +66,16 @@ export interface HasItem {
 
 export interface HasValue {
 	value: string;
+}
+
+export interface HasOffset {
+	offset: number;
+}
+
+export interface HasTotalLength {
+	totalLength: number;
+}
+
+export interface HasRangeEvent {
+	onRangeRequest(rangeDetail: RangeDetails): void;
 }
