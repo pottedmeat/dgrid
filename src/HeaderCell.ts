@@ -8,8 +8,10 @@ import * as headerCellClasses from './styles/headerCell.css';
 
 export interface HeaderCellProperties extends ThemeableProperties, HasColumn, HasSortDetail, HasSortEvent { }
 
+export const HeaderCellBase = ThemeableMixin(RegistryMixin(WidgetBase));
+
 @theme(headerCellClasses)
-class HeaderCell extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderCellProperties> {
+class HeaderCell extends HeaderCellBase<HeaderCellProperties> {
 	onSortRequest(): void {
 		const {
 			key = '',
@@ -48,9 +50,9 @@ class HeaderCell extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderCellPro
 		}, [
 			v('span', [ column.label || column.id ]),
 			sortDetail && sortDetail.columnId === key ? v('div', {
-				role: 'presentation',
-				classes: this.classes(...sortClasses)
-			}) : null
+					role: 'presentation',
+					classes: this.classes(...sortClasses)
+				}) : null
 		]);
 	}
 }
