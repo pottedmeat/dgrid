@@ -1,22 +1,21 @@
-import WidgetBase from '@dojo/widget-core/WidgetBase';
-import { PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
-import { v, w } from '@dojo/widget-core/d';
-import FactoryRegistry from '@dojo/widget-core/FactoryRegistry';
-import Header from './Header';
-import HeaderCell from './HeaderCell';
-import Body from './Body';
-import Row from './Row';
-import Cell from './Cell';
-import { DataProperties, HasColumns } from './interfaces';
-import DataProviderBase, { Options } from './bases/DataProviderBase';
-import { HeaderProperties } from './Header';
-import { BodyProperties } from './Body';
-import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
-import { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import { includes } from '@dojo/shim/array';
 import { Subscription } from '@dojo/shim/Observable';
+import { v, w } from '@dojo/widget-core/d';
+import FactoryRegistry from '@dojo/widget-core/FactoryRegistry';
+import { PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
+import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
+import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
+import DataProviderBase, { Options } from './bases/DataProviderBase';
+import Body, { BodyProperties } from './Body';
+import Cell from './Cell';
+import Header, { HeaderProperties } from './Header';
+import HeaderCell from './HeaderCell';
+import { DataProperties, HasColumns } from './interfaces';
+import Row from './Row';
 
 import * as gridClasses from './styles/grid.css';
+
+export const GridBase = ThemeableMixin(WidgetBase);
 
 /**
  * @type GridProperties
@@ -42,7 +41,7 @@ function createRegistry(partialRegistry?: FactoryRegistry) {
 }
 
 @theme(gridClasses)
-class Grid extends ThemeableMixin(WidgetBase)<GridProperties> {
+class Grid extends GridBase<GridProperties> {
 	private data: DataProperties<any>;
 	private subscription: Subscription;
 

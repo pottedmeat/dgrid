@@ -1,16 +1,18 @@
-import WidgetBase from '@dojo/widget-core/WidgetBase';
-import { RegistryMixin, RegistryMixinProperties }  from '@dojo/widget-core/mixins/Registry';
 import { v, w } from '@dojo/widget-core/d';
-import { HasColumns, HasSortDetails, HasSortEvent } from './interfaces';
-import { HeaderCellProperties } from './HeaderCell';
+import { RegistryMixin, RegistryMixinProperties }  from '@dojo/widget-core/mixins/Registry';
 import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
+import WidgetBase from '@dojo/widget-core/WidgetBase';
+import { HeaderCellProperties } from './HeaderCell';
+import { HasColumns, HasSortDetails, HasSortEvent } from './interfaces';
 
 import * as headerClasses from './styles/header.css';
+
+export const HeaderBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
 export interface HeaderProperties extends ThemeableProperties, HasColumns, HasSortDetails, HasSortEvent, RegistryMixinProperties { }
 
 @theme(headerClasses)
-class Header extends ThemeableMixin(RegistryMixin(WidgetBase))<HeaderProperties> {
+class Header extends HeaderBase<HeaderProperties> {
 	render() {
 		const {
 			onSortRequest,
