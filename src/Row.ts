@@ -8,12 +8,14 @@ import { HasColumns, ItemProperties } from './interfaces';
 
 import * as rowClasses from './styles/row.css';
 
+export const RowBase = ThemeableMixin(RegistryMixin(WidgetBase));
+
 export interface RowProperties extends WidgetProperties, HasColumns, RegistryMixinProperties {
 	item: ItemProperties<any>;
 }
 
 @theme(rowClasses)
-class Row  extends ThemeableMixin(RegistryMixin(WidgetBase))<RowProperties> {
+class Row extends RowBase<RowProperties> {
 	render() {
 		const {
 			registry,
