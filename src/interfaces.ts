@@ -25,7 +25,7 @@ export interface HasCellRenderer<T> {
 export interface Column<T> extends HasCellRenderer<T> {
 	id: string;
 	label?: string;
-	field?: string;
+	field?: keyof T;
 	sortable?: boolean; // default true
 }
 
