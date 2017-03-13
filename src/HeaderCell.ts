@@ -36,9 +36,9 @@ class HeaderCell extends HeaderCellBase<HeaderCellProperties> {
 		const classes = [ headerCellClasses.headerCell, column.sortable !== false ? headerCellClasses.sortable : null ];
 
 		const sortClasses = sortDetail ? [
-				headerCellClasses.sortArrow,
-				sortDetail.descending ? headerCellClasses.sortArrowDown : headerCellClasses.sortArrowUp
-			] : [];
+			headerCellClasses.sortArrow,
+			sortDetail.descending ? headerCellClasses.sortArrowDown : headerCellClasses.sortArrowUp
+		] : [];
 
 		const onclick = (onSortRequest && column.sortable !== false) ? { onclick: this.onSortRequest } : {};
 
@@ -49,9 +49,9 @@ class HeaderCell extends HeaderCellBase<HeaderCellProperties> {
 		}, [
 			v('span', [ column.label || column.id ]),
 			sortDetail && sortDetail.columnId === key ? v('div', {
-					role: 'presentation',
-					classes: this.classes(...sortClasses)
-				}) : null
+				role: 'presentation',
+				classes: this.classes(...sortClasses)
+			}) : null
 		]);
 	}
 }
