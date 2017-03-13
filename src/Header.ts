@@ -39,7 +39,7 @@ class Header extends HeaderBase<HeaderProperties> {
 						}
 					}
 
-					return w('header-cell', <HeaderCellProperties> {
+					return w<HeaderCellProperties>('header-cell', {
 						key: column.id,
 						column,
 						sortDetail,

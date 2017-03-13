@@ -44,6 +44,7 @@ function createRegistry(partialRegistry?: FactoryRegistry) {
 class Grid extends GridBase<GridProperties> {
 	private data: DataProperties<any>;
 	private subscription: Subscription;
+	protected registry: FactoryRegistry;
 
 	constructor() {
 		super();
@@ -95,14 +96,14 @@ class Grid extends GridBase<GridProperties> {
 			classes: this.classes(gridClasses.grid),
 			role: 'grid'
 		}, [
-			w('header', <HeaderProperties> {
+			w<HeaderProperties>('header', {
 				registry,
 				theme,
 				columns,
 				sortDetails: sort,
 				onSortRequest: onSortRequest && onSortRequest.bind(dataProvider)
 			}),
-			w('body', <BodyProperties> {
+			w<BodyProperties>('body', {
 				registry,
 				theme,
 				columns,

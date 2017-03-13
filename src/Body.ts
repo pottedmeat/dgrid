@@ -29,7 +29,7 @@ class Body extends BodyBase<BodyProperties> {
 					classes: this.classes(bodyClasses.content)
 				},
 				items.map((item) => {
-					return w('row', <RowProperties> {
+					return w<RowProperties>('row', {
 						key: item.id,
 						item,
 						columns,

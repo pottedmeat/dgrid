@@ -26,7 +26,7 @@ class Cell extends CellBase<CellProperties> {
 			role: 'gridcell',
 			classes: this.classes(cellClasses.cell)
 		}, [
-			cellRenderer ? w(cellRenderer(item), <CellRendererProperties> {
+			cellRenderer ? w<CellRendererProperties>(cellRenderer(item), {
 				value,
 				column,
 				item,
