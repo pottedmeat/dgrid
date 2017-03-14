@@ -1,10 +1,4 @@
-import { WidgetProperties, WidgetBaseConstructor } from '@dojo/widget-core/interfaces';
-import { RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
-import { ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
-
-export interface CellRendererProperties extends WidgetProperties, HasValue, HasColumn, HasItem, RegistryMixinProperties, ThemeableProperties { }
-
-export interface Column<T> extends HasCellRenderer<T> {
+export interface Column<T> {
 	id: string;
 	label?: string;
 	field?: keyof T;
@@ -14,10 +8,6 @@ export interface Column<T> extends HasCellRenderer<T> {
 export interface DataProperties<T> {
 	items: ItemProperties<T>[];
 	sort?: SortDetails[];
-}
-
-export interface HasCellRenderer<T> {
-	cellRenderer?(item: ItemProperties<T>): string | WidgetBaseConstructor<CellRendererProperties>;
 }
 
 export interface HasColumn {
@@ -61,4 +51,3 @@ export interface SortDetails {
 	columnId: string;
 	descending?: boolean;
 }
-

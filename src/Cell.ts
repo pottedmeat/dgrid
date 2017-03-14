@@ -8,31 +8,20 @@ import * as cellClasses from './styles/cell.css';
 
 export const CellBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
-export interface CellProperties extends ThemeableProperties, HasValue, HasColumn, HasItem, HasCellRenderer<any>, RegistryMixinProperties { }
+export interface CellProperties extends ThemeableProperties, HasValue, HasColumn, HasItem, RegistryMixinProperties { }
 
 @theme(cellClasses)
 class Cell extends CellBase<CellProperties> {
 	render() {
 		const {
-			value = '',
-			column,
-			item,
-			cellRenderer,
-			registry,
-			theme
+			value = ''
 		} = this.properties;
 
 		return v('td', {
 			role: 'gridcell',
 			classes: this.classes(cellClasses.cell)
 		}, [
-			cellRenderer ? w<CellRendererProperties>(cellRenderer(item), {
-				value,
-				column,
-				item,
-				registry,
-				theme
-			}) : String(value)
+			String(value)
 		]);
 	}
 }

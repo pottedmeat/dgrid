@@ -1,16 +1,16 @@
-import * as registerSuite from 'intern/lib/interfaces/object';
-import { assert } from 'chai';
 import { VNode } from '@dojo/interfaces/vdom';
 import FactoryRegistry from '@dojo/widget-core/FactoryRegistry';
-import { spy, stub, SinonSpy } from 'sinon';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
-import Row from '../../src/Row';
-import { spyOnWidget, cleanProperties } from './util';
+import { assert } from 'chai';
+import * as registerSuite from 'intern/lib/interfaces/object';
+import { spy, stub, SinonSpy } from 'sinon';
 import { CellProperties } from '../../src/Cell';
+import Row from '../../src/Row';
+import { spyOnWidget, cleanProperties } from '../support/util';
 
-let widgetBaseSpy: SinonSpy;
-let setProperties: SinonSpy | null = null;
 let mockRegistry: FactoryRegistry;
+let setProperties: SinonSpy | null = null;
+let widgetBaseSpy: SinonSpy;
 
 registerSuite({
 	name: 'Row',
@@ -58,8 +58,7 @@ registerSuite({
 		assert.deepEqual(cellProperties, {
 			value: properties.item.data.foo,
 			item: properties.item,
-			key: properties.columns[0].id,
-			cellRenderer: undefined
+			key: properties.columns[0].id
 		});
 	},
 	'render with no columns'() {
@@ -68,9 +67,9 @@ registerSuite({
 			item: { foo: 'bar' }
 		};
 
-		const rowVie = new Row();
-		rowVie.setProperties(properties);
-		const vnode = <VNode> rowVie.__render__();
+		const row = new Row();
+		row.setProperties(properties);
+		const vnode = <VNode> row.__render__();
 
 		assert.strictEqual(vnode.vnodeSelector, 'div');
 		assert.lengthOf(vnode.children, 1);

@@ -32,15 +32,14 @@ class Row extends RowBase<RowProperties> {
 				classes: this.classes(rowClasses.rowTable)
 			}, [
 				v('tr', columns.map((column) => {
-					const { id, field, cellRenderer } = column;
+					const { id, field } = column;
 
 					return w<CellProperties>('cell', {
 						registry,
 						key: id,
 						column,
 						item,
-						value: item.data[ field || id ],
-						cellRenderer
+						value: item.data[ field || id ]
 					});
 				}))
 			])

@@ -33,8 +33,8 @@ module.exports = function (grunt) {
     ]));
 
     grunt.registerTask('dist', grunt.config.get('distTasks').concat([
-        'postcss:distStyles',
-        'postcss:modules-dev',
+        'postcss:modules-dist',
+        'postcss:variables',
         'copy:distStyles'
     ]));
 };
