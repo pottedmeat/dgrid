@@ -1,5 +1,5 @@
 import { VNode } from '@dojo/interfaces/vdom';
-import FactoryRegistry from '@dojo/widget-core/FactoryRegistry';
+import FactoryRegistry from '@dojo/widget-core/WidgetRegistry';
 import { assert } from 'chai';
 import * as registerSuite from 'intern/lib/interfaces/object';
 import HeaderCell from '../../src/HeaderCell';

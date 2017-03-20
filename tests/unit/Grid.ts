@@ -1,7 +1,7 @@
 import * as registerSuite from 'intern/lib/interfaces/object';
 import { assert } from 'chai';
 import { VNode } from '@dojo/interfaces/vdom';
-import FactoryRegistry from '@dojo/widget-core/FactoryRegistry';
+import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
 import { spy, SinonSpy } from 'sinon';
 import Grid from '../../src/Grid';
 import ArrayDataProvider from '../../src/providers/ArrayDataProvider';
@@ -16,7 +16,7 @@ let headerSpy: SinonSpy;
 let bodySpy: SinonSpy;
 let setHeaderProperties: SinonSpy | null = null;
 let setBodyProperties: SinonSpy | null = null;
-let mockRegistry: FactoryRegistry;
+let mockRegistry: WidgetRegistry;
 
 registerSuite({
 	name: 'Grid',

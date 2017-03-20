@@ -1,8 +1,8 @@
-import { v, w } from '@dojo/widget-core/d';
+import { v } from '@dojo/widget-core/d';
 import { RegistryMixin, RegistryMixinProperties }  from '@dojo/widget-core/mixins/Registry';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
-import { HasValue, HasColumn, HasItem, HasCellRenderer, CellRendererProperties } from './interfaces';
+import { HasValue, HasColumn, HasItem } from './interfaces';
 
 import * as cellClasses from './styles/cell.css';
 

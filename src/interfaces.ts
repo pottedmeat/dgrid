@@ -49,7 +49,7 @@ export interface HasSortDetails {
 }
 
 export interface HasSortDetail {
-	sortDetail: SortDetails;
+	sortDetail?: SortDetails;
 }
 
 export interface HasSortEvent {

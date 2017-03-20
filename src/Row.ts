@@ -25,13 +25,15 @@ class Row  extends ThemeableMixin(RegistryMixin(WidgetBase))<RowProperties> {
 			role: 'presentation',
 			classes: this.classes(rowClasses.rowTable)
 		}, [
-			v('tr', columns.map(({ id, field, cellRenderer }) => {
+			v('tr', columns.map((column) => {
+				const { id, field } = column;
+
 				return w('cell', <CellProperties> {
 					registry,
 					key: id,
-					item: item,
-					value: item.data[ field || id ],
-					cellRenderer
+					column,
+					item,
+					value: item.data[ field || id ]
 				});
 			}))
 		]);
