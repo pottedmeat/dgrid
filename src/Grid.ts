@@ -1,7 +1,7 @@
 import { includes } from '@dojo/shim/array';
 import { Subscription } from '@dojo/shim/Observable';
 import { v, w } from '@dojo/widget-core/d';
-import FactoryRegistry from '@dojo/widget-core/FactoryRegistry';
+import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
 import { PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
@@ -26,12 +26,12 @@ export const GridBase = ThemeableMixin(WidgetBase);
  * @property columns		Column definitions
  */
 export interface GridProperties extends ThemeableProperties, HasColumns {
-	registry?: FactoryRegistry;
+	registry?: WidgetRegistry;
 	dataProvider: DataProviderBase<any, Options>;
 }
 
-function createRegistry(partialRegistry?: FactoryRegistry) {
-	const registry = new FactoryRegistry();
+function createRegistry(partialRegistry?: WidgetRegistry) {
+	const registry = new WidgetRegistry();
 	registry.define('header', (partialRegistry && partialRegistry.get('header')) || Header);
 	registry.define('header-cell', (partialRegistry && partialRegistry.get('header-cell')) || HeaderCell);
 	registry.define('body', (partialRegistry && partialRegistry.get('body')) || Body);
@@ -44,7 +44,7 @@ function createRegistry(partialRegistry?: FactoryRegistry) {
 class Grid extends GridBase<GridProperties> {
 	private data: DataProperties<any>;
 	private subscription: Subscription;
-	protected registry: FactoryRegistry;
+	protected registry: WidgetRegistry;
 
 	constructor() {
 		super();
