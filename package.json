@@ -21,7 +21,6 @@
     "url": "https://github.com/dojo/dgrid.git"
   },
   "scripts": {
-    "prepublish": "grunt peerDepInstall",
     "test": "grunt test"
   },
   "dependencies": {
@@ -29,7 +28,7 @@
     "@dojo/has": "2.0.0-alpha.8",
     "@dojo/i18n": "2.0.0-alpha.8",
     "@dojo/shim": "2.0.0-beta.10",
-    "@dojo/widget-core": "^2.0.0-alpha.28",
+    "@dojo/widget-core": "2.0.0-alpha.28",
     "maquette": "2.4.3"
   },
   "devDependencies": {
@@ -39,13 +38,10 @@
     "@types/glob": "5.0.*",
     "@types/grunt": "0.4.*",
     "@types/sinon": "^1.16.31",
-    "codecov.io": "0.1.6",
     "glob": "^7.0.3",
     "grunt": "~1.0.1",
-    "grunt-dojo2": ">=2.0.0-beta.33",
-    "grunt-text-replace": "^0.4.0",
+    "grunt-dojo2": "2.0.0-beta.33",
     "intern": "^3.4.1",
-    "istanbul": "^0.4.5",
     "tslint": "^3.15.0",
     "typescript": "~2.2.1",
     "sinon": "^1.17.7"

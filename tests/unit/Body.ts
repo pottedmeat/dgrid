@@ -1,16 +1,17 @@
 import * as registerSuite from 'intern/lib/interfaces/object';
 import { assert } from 'chai';
 import { VNode } from '@dojo/interfaces/vdom';
-import FactoryRegistry from '@dojo/widget-core/WidgetRegistry';
+import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
 import { spy, stub, SinonSpy } from 'sinon';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
 import Body from '../../src/Body';
+import { BodyProperties } from '../../src/Body';
 import { spyOnWidget, cleanProperties } from './util';
 import { RowProperties } from '../../src/Row';
 
 let widgetBaseSpy: SinonSpy;
 let setProperties: SinonSpy | null = null;
-let mockRegistry: FactoryRegistry;
+let mockRegistry: WidgetRegistry;
 
 registerSuite({
 	name: 'Body',
@@ -33,7 +34,7 @@ registerSuite({
 				data: { id: 'id', foo: 'bar' }
 			}
 		];
-		const properties = {
+		const properties: BodyProperties = {
 			registry: mockRegistry,
 			items,
 			columns: [
@@ -42,7 +43,7 @@ registerSuite({
 		};
 
 		const body = new Body();
-		body.setProperties(<any> properties);
+		body.setProperties(properties);
 		const promise = new Promise((resolve) => setTimeout(resolve, 10));
 
 		return promise.then(() => {
@@ -67,7 +68,7 @@ registerSuite({
 	},
 	'render with no items'() {
 		const items: any[] = [];
-		const properties = {
+		const properties: BodyProperties = {
 			registry: mockRegistry,
 			items,
 			columns: [
@@ -76,7 +77,7 @@ registerSuite({
 		};
 
 		const row = new Body();
-		row.setProperties(<any> properties);
+		row.setProperties(properties);
 		const promise = new Promise((resolve) => setTimeout(resolve, 10));
 
 		return promise.then(() => {
