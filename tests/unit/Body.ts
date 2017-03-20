@@ -5,7 +5,6 @@ import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
 import { spy, stub, SinonSpy } from 'sinon';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
 import Body from '../../src/Body';
-import { BodyProperties } from '../../src/Body';
 import { spyOnWidget, cleanProperties } from './util';
 import { RowProperties } from '../../src/Row';
 
@@ -34,7 +33,7 @@ registerSuite({
 				data: { id: 'id', foo: 'bar' }
 			}
 		];
-		const properties: BodyProperties = {
+		const properties = {
 			registry: mockRegistry,
 			items,
 			columns: [
@@ -43,7 +42,7 @@ registerSuite({
 		};
 
 		const body = new Body();
-		body.setProperties(properties);
+		body.setProperties(<any> properties);
 		const promise = new Promise((resolve) => setTimeout(resolve, 10));
 
 		return promise.then(() => {
@@ -68,7 +67,7 @@ registerSuite({
 	},
 	'render with no items'() {
 		const items: any[] = [];
-		const properties: BodyProperties = {
+		const properties = {
 			registry: mockRegistry,
 			items,
 			columns: [
@@ -77,7 +76,7 @@ registerSuite({
 		};
 
 		const row = new Body();
-		row.setProperties(properties);
+		row.setProperties(<any> properties);
 		const promise = new Promise((resolve) => setTimeout(resolve, 10));
 
 		return promise.then(() => {

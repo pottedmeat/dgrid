@@ -1,80 +1,49 @@
-import WidgetBase from '@dojo/widget-core/WidgetBase';
+import { from } from '@dojo/shim/array';
+import Map from '@dojo/shim/Map';
+import Promise from '@dojo/shim/Promise';
+import { v, w } from '@dojo/widget-core/d';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
-import { v, w, decorate, isHNode } from '@dojo/widget-core/d';
+import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { HasColumns, HasItems, HasRangeEvent, HasOffset, HasTotalLength } from './interfaces';
 import { RowProperties } from './Row';
 import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
-import { ProjectionOptions, VNodeProperties, VNode } from '@dojo/interfaces/vdom';
-import { DNode, HNode } from '@dojo/widget-core/interfaces';
 
 import * as bodyClasses from './styles/body.css';
-import Map from '@dojo/shim/Map';
 
 interface Measured {
 	element: HTMLElement;
 	height: number;
-}
-
-function isHNodeWithKey(node: DNode): node is HNode {
-	return isHNode(node) && node && (node.properties != null) && (node.properties.key != null);
+	promise?: Promise<HTMLElement>;
 }
 
 export interface BodyProperties extends ThemeableProperties, HasColumns, HasItems, HasOffset, HasTotalLength, HasRangeEvent, RegistryMixinProperties { }
 
 @theme(bodyClasses)
 class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
-	private itemElementMap = new Map<string, Measured>();
+	private previousItemElementMap = new Map<string, Measured>();
+	private currentItemElementMap = new Map<string, Measured>();
+	private before: HTMLElement;
 	private scroller: HTMLElement;
+	private content: HTMLElement;
+	private after: HTMLElement;
 	private visible: string[] = [];
 
-	constructor() {
-		super();
-
-		const afterCreateCallback = (element: HTMLElement, projectionOptions: ProjectionOptions, vnodeSelector: string, properties: VNodeProperties, children: VNode[]): void => {
-			this.onElementCreated(element, String(properties.key));
-		};
-
-		const afterUpdateCallback = (element: HTMLElement, projectionOptions: ProjectionOptions, vnodeSelector: string, properties: VNodeProperties, children: VNode[]): void => {
-			this.onElementUpdated(element, String(properties.key));
-		};
-
-		this.addDecorator('afterRender', (node: DNode) => {
-			decorate(node, (node: HNode) => {
-				node.properties.afterCreate = afterCreateCallback;
-			}, isHNodeWithKey);
-
-			decorate(node, (node: HNode) => {
-				node.properties.afterUpdate = afterUpdateCallback;
-			}, isHNodeWithKey);
-			return node;
-		});
-	}
-
-	protected onScroll(event: UIEvent) {
-		const target = <HTMLElement> event.target;
-		const {
-			items,
-			offset,
-			totalLength,
-			onRangeRequest
-		} = this.properties;
-
+	private visibleKeys() {
 		// find the first visible row
-		const scroll = target.scrollTop;
+		const {
+			items
+		} = this.properties;
+		const scroll = this.scroller.scrollTop;
 		const contentHeight = this.scroller.offsetHeight;
-		let before = 0;
 		const visible: string[] = this.visible = [];
 		for (let i = 0, item; (item = items[i]); i++) {
 			const key = String(item.id);
-			const measured = this.itemElementMap.get(key);
+			const measured = this.currentItemElementMap.get(key);
 			if (measured) {
 				const element = measured.element;
 				const top = element.offsetTop;
 				const height = element.offsetHeight;
 				if ((top + height) >= scroll && top < (scroll + contentHeight)) {
-					if (!visible.length) {
-						before = i;
-					}
 					visible.push(key);
 				}
 				else if (visible.length) {
@@ -82,29 +51,124 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 				}
 			}
 		}
+		return visible;
+	}
 
-		// TODO: Completely reload data when visible is empty (totally new data is loaded)
+	protected onScroll(event: UIEvent) {
+		const {
+			items,
+			offset,
+			totalLength,
+			onRangeRequest
+		} = this.properties;
 
-		// 100 before and after
-		const start = Math.max(0, offset - 100 + before);
-		let count = (Math.min(before, 100) + visible.length + 100);
-		if (start + count > totalLength) {
-			count = (totalLength - start);
+		const visible = this.visibleKeys();
+
+		if (visible.length === 0) {
+			// Completely reset when visible is empty (no overlap in data)
 		}
+		else {
+			let before = 0;
+			for (let i = 0, item; (item = items[i]); i++) {
+				const key = String(item.id);
+				if (visible[0] === key) {
+					before = i;
+					break;
+				}
+			}
 
-		if (start !== offset || count !== items.length) {
-			console.log({ start, count });
-			onRangeRequest && onRangeRequest({ start, count });
+			// 100 before and after
+			const start = Math.max(0, offset - 100 + before);
+			let count = (Math.min(before, 100) + visible.length + 100);
+			if (start + count > totalLength) {
+				count = (totalLength - start);
+			}
+
+			if (start !== offset || count !== items.length) {
+				onRangeRequest && onRangeRequest({ start, count });
+			}
 		}
 	}
 
 	protected onElementChange(element: HTMLElement, key: string): void {
 		if (key === 'scroller') {
+			// There is a margin before and after the content that starts at 1000px in height.
+			// As content is added and removed, these margins will adjust until they need to be reset
+
 			this.scroller = element;
+
+			return;
+
+			const {
+				previousItemElementMap,
+				currentItemElementMap,
+				properties: {
+					items
+				}
+			} = this;
+
+			const visibleKeys = this.visibleKeys();
+			const previousKeys = from(previousItemElementMap.keys());
+			const currentKeys = items.map((item) => { return String(item.id); });
+			let removed = 0;
+			let added = 0;
+			for (const visibleKey of visibleKeys) {
+				const overlap = currentKeys.indexOf(visibleKey);
+				if (overlap !== -1) {
+					// the first key in common between visible items and current items
+					for (const previousKey of previousKeys) {
+						if (previousKey === visibleKey) {
+							break;
+						}
+						if (currentKeys.indexOf(previousKey) === -1) {
+							const measured = previousItemElementMap.get(previousKey);
+							if (measured) {
+								removed += measured.height;
+							}
+						}
+					}
+					for (let i = 0; i < overlap; i++) {
+						const currentKey = currentKeys[i];
+						if (previousKeys.indexOf(currentKey) === -1) {
+							const measured = currentItemElementMap.get(currentKey);
+							if (measured) {
+								added += measured.element.offsetHeight;
+							}
+						}
+					}
+					break;
+				}
+			}
+
+			let beforeHeight = (this.before.clientHeight - added + removed);
+			if (beforeHeight < 500) {
+				// reset margins
+				this.scroller.scrollTop -= (1000 - beforeHeight);
+				beforeHeight = 1000;
+			}
+			else if (beforeHeight > 1500) {
+				// reset margins
+				this.scroller.scrollTop += (beforeHeight - 1000);
+				beforeHeight = 1000;
+			}
+			this.before.style.height = beforeHeight + "px";
+			this.after.style.height = (2000 - beforeHeight) + "px";
+
+			const newItemElementMap = new Map<string, Measured>();
+			for (const item of items) {
+				const key = String(item.id);
+				const measured = currentItemElementMap.get(key);
+				if (measured) {
+					newItemElementMap.set(key, measured);
+				}
+			}
+			this.previousItemElementMap = currentItemElementMap;
+			this.currentItemElementMap = newItemElementMap;
+
 			return;
 		}
 
-		let measured = this.itemElementMap.get(key);
+		let measured = this.currentItemElementMap.get(key);
 		if (!measured) {
 			measured = {
 				element,
@@ -115,10 +179,24 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 			measured.element = element;
 			measured.height = element.offsetHeight;
 		}
-		this.itemElementMap.set(key, measured);
+		this.currentItemElementMap.set(key, measured);
 	}
 
 	protected onElementCreated(element: HTMLElement, key: string): void {
+		if (key === 'before') {
+			// element.style.height = "1000px";
+			this.before = element;
+			return;
+		}
+		if (key === 'content') {
+			this.content = element;
+			return;
+		}
+		if (key === 'after') {
+			// element.style.height = "1000px";
+			this.after = element;
+			return;
+		}
 		this.onElementChange(element, key);
 	}
 
@@ -134,6 +212,11 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 			theme
 		} = this.properties;
 
+		// I have the heights of previously rendered rows captured
+		// I don't have the heights of new rows captured
+		// I can create an all promise that resolves when I know all the new heights
+		// that sets the margin height
+
 		return v('div', {
 				key: 'scroller',
 				classes: this.classes(bodyClasses.scroller),
@@ -141,9 +224,14 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 			},
 			[
 				v('div', {
+					key: 'content',
 					classes: this.classes(bodyClasses.content)
 				},
-				items.map((item) => {
+				[
+					v('div', {
+						key: 'before'
+					}),
+					...items.map((item) => {
 						return v('div', {
 							key: item.id,
 							role: 'row',
@@ -157,8 +245,11 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 								theme
 							})
 						]);
+					}),
+					v('div', {
+						key: 'after'
 					})
-				)
+				])
 			]
 		);
 	}
