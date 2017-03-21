@@ -5,7 +5,7 @@ import { WidgetBase } from '@dojo/widget-core/WidgetBase';
 import { WidgetProperties } from '@dojo/widget-core/interfaces';
 import { w, v } from '@dojo/widget-core/d';
 import { GridProperties } from '../Grid';
-import { Column, RenderedValueColumn, RenderedColumn } from '../interfaces';
+import { RenderedValueColumn, RenderedColumn } from '../interfaces';
 
 interface Step {
 	order: number;
@@ -50,7 +50,10 @@ const columns = [
 		},
 		id: 'name'
 	},
-	{
+	<RenderedValueColumn<Step, string>> {
+		renderValue(value) {
+			return value;
+		},
 		id: 'description',
 		label: 'what to do',
 		sortable: false
