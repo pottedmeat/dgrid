@@ -1,7 +1,6 @@
 .grid {
-    position: relative;
-    overflow: hidden;  /* This is needed by IE to prevent crazy scrollbar flashing */
+    display: flex;
+    flex-direction: column;
     border: 1px solid #ddd;
     height: 30em;
-    display: block;
 }

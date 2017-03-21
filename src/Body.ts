@@ -65,7 +65,7 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 		const visible = this.visibleKeys();
 
 		if (visible.length === 0) {
-			// Completely reset when visible is empty (no overlap in data)
+			// TODO: completely reset when visible is empty (no overlap in data)
 		}
 		else {
 			let before = 0;
@@ -84,7 +84,7 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 				count = (totalLength - start);
 			}
 
-			if (start !== offset || count !== items.length) {
+			if (Math.abs(start - offset) > 25 || Math.abs(count - items.length) > 25) {
 				onRangeRequest && onRangeRequest({ start, count });
 			}
 		}
@@ -92,12 +92,7 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 
 	protected onElementChange(element: HTMLElement, key: string): void {
 		if (key === 'scroller') {
-			// There is a margin before and after the content that starts at 1000px in height.
-			// As content is added and removed, these margins will adjust until they need to be reset
-
 			this.scroller = element;
-
-			return;
 
 			const {
 				previousItemElementMap,
@@ -140,19 +135,8 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 				}
 			}
 
-			let beforeHeight = (this.before.clientHeight - added + removed);
-			if (beforeHeight < 500) {
-				// reset margins
-				this.scroller.scrollTop -= (1000 - beforeHeight);
-				beforeHeight = 1000;
-			}
-			else if (beforeHeight > 1500) {
-				// reset margins
-				this.scroller.scrollTop += (beforeHeight - 1000);
-				beforeHeight = 1000;
-			}
-			this.before.style.height = beforeHeight + "px";
-			this.after.style.height = (2000 - beforeHeight) + "px";
+			// TODO: use these numbers
+			console.log('removed:', removed, 'added:', added);
 
 			const newItemElementMap = new Map<string, Measured>();
 			for (const item of items) {
@@ -201,7 +185,20 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 	}
 
 	protected onElementUpdated(element: HTMLElement, key: string): void {
+		if (key === 'before' || key === 'content' || key === 'after') {
+			return;
+		}
 		this.onElementChange(element, key);
+	}
+
+	__render__() {
+		const scrollTop = this.scroller && this.scroller.scrollTop;
+		const applied = super.__render__.apply(this, arguments);
+		setTimeout(() => {
+			this.scroller && (this.scroller.scrollTop = scrollTop);
+			console.log('setting', this.scroller && this.scroller.scrollTop, 'to', scrollTop);
+		}, 0);
+		return applied;
 	}
 
 	render() {
@@ -212,11 +209,6 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 			theme
 		} = this.properties;
 
-		// I have the heights of previously rendered rows captured
-		// I don't have the heights of new rows captured
-		// I can create an all promise that resolves when I know all the new heights
-		// that sets the margin height
-
 		return v('div', {
 				key: 'scroller',
 				classes: this.classes(bodyClasses.scroller),
@@ -224,8 +216,7 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 			},
 			[
 				v('div', {
-					key: 'content',
-					classes: this.classes(bodyClasses.content)
+					key: 'content'
 				},
 				[
 					v('div', {
