@@ -3,9 +3,6 @@
 }
 
 .row {
-    position: absolute;
-    right: 17px; /* scrollbar width; revised manually if necessary */
-    left: 0;
 }
 
 .rowTable {

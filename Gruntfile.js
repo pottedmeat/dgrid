@@ -12,14 +12,14 @@ module.exports = function (grunt) {
             },
             devStyles: {
                 expand: true,
-                cwd: 'src',
-                src: 'styles/dgrid.css',
+                cwd: '.',
+                src: 'src/styles/dgrid.css',
                 dest: '<%= devDirectory %>'
             },
             distStyles: {
                 expand: true,
-                cwd: 'src',
-                src: 'styles/dgrid.css',
+                cwd: '.',
+                src: 'src/styles/dgrid.css',
                 dest: '<%= distDirectory %>'
             }
         }

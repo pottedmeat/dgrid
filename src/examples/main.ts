@@ -3,8 +3,15 @@ import Grid from '../Grid';
 import ArrayDataProvider from '../providers/ArrayDataProvider';
 import { WidgetBase } from '@dojo/widget-core/WidgetBase';
 import { WidgetProperties } from '@dojo/widget-core/interfaces';
-import { w } from '@dojo/widget-core/d';
+import { w, v } from '@dojo/widget-core/d';
 import { GridProperties } from '../Grid';
+import { Column, RenderedValueColumn, RenderedColumn } from '../interfaces';
+
+interface Step {
+	order: number;
+	name: string;
+	description: string;
+}
 
 const data = [
 	{ order: 1, name: 'preheat', description: 'Preheat your oven to 350F' },
@@ -24,11 +31,23 @@ const dataProvider = new ArrayDataProvider({
 });
 
 const columns = [
-	{
+	<RenderedValueColumn<Step, number>> {
+		get(item) {
+			return (item.data.order + 10);
+		},
+		renderValue(value) {
+			return v('span', [
+				'Step ',
+				String(value)
+			]);
+		},
 		id: 'order',
 		label: 'step' // give column a custom name
 	},
-	{
+	<RenderedColumn<Step>> {
+		render(item) {
+			return item.data.name;
+		},
 		id: 'name'
 	},
 	{
