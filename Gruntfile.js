@@ -12,8 +12,8 @@ module.exports = function (grunt) {
             },
             devStyles: {
                 expand: true,
-                cwd: 'src',
-                src: 'styles/dgrid.css',
+                cwd: '.',
+                src: 'src/styles/dgrid.css',
                 dest: '<%= devDirectory %>'
             },
             distStyles: {
@@ -27,7 +27,6 @@ module.exports = function (grunt) {
 
     grunt.registerTask('dev', grunt.config.get('devTasks').concat([
         'copy:staticFiles',
-        'copy:staticTestFiles',
         'postcss:modules-dev',
         'copy:devStyles'
     ]));
