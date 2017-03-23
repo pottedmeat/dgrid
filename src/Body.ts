@@ -105,8 +105,8 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 			const visibleKeys = this.visibleKeys();
 			const previousKeys = from(previousItemElementMap.keys());
 			const currentKeys = items.map((item) => { return String(item.id); });
-			let removed = 0;
-			let added = 0;
+			let before = 0;
+			let after = 0;
 			for (const visibleKey of visibleKeys) {
 				const overlap = currentKeys.indexOf(visibleKey);
 				if (overlap !== -1) {
@@ -116,27 +116,58 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 							break;
 						}
 						if (currentKeys.indexOf(previousKey) === -1) {
+							// this node no longer exists
 							const measured = previousItemElementMap.get(previousKey);
 							if (measured) {
-								removed += measured.height;
+								before += measured.height;
 							}
 						}
 					}
 					for (let i = 0; i < overlap; i++) {
 						const currentKey = currentKeys[i];
 						if (previousKeys.indexOf(currentKey) === -1) {
+							// this node is new
 							const measured = currentItemElementMap.get(currentKey);
 							if (measured) {
-								added += measured.element.offsetHeight;
+								before -= measured.element.offsetHeight;
 							}
 						}
 					}
+
+					let found = false;
+					for (const previousKey of previousKeys) {
+						if (found) {
+							if (currentKeys.indexOf(previousKey) === -1) {
+								// this node no longer exists
+								const measured = previousItemElementMap.get(previousKey);
+								if (measured) {
+									after -= measured.height;
+								}
+							}
+						}
+						else if (previousKey === visibleKey) {
+							found = true;
+						}
+					}
+					for (let i = (overlap + 1); i < currentKeys.length; i++) {
+						const currentKey = currentKeys[i];
+						if (previousKeys.indexOf(currentKey) === -1) {
+							// this node is new
+							const measured = currentItemElementMap.get(currentKey);
+							if (measured) {
+								after += measured.element.offsetHeight;
+							}
+						}
+					}
+
 					break;
 				}
 			}
 
 			// TODO: use these numbers
-			console.log('removed:', removed, 'added:', added);
+			console.log('before:', before, 'after:', after);
+			this.before.style.height = (this.before.offsetHeight + before) + 'px';
+			this.after.style.height = (this.after.offsetHeight + after) + "px";
 
 			const newItemElementMap = new Map<string, Measured>();
 			for (const item of items) {
@@ -177,7 +208,7 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 			return;
 		}
 		if (key === 'after') {
-			// element.style.height = "1000px";
+			element.style.height = "10000px";
 			this.after = element;
 			return;
 		}
@@ -195,9 +226,8 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 		const scrollTop = this.scroller && this.scroller.scrollTop;
 		const applied = super.__render__.apply(this, arguments);
 		setTimeout(() => {
-			this.scroller && (this.scroller.scrollTop = scrollTop);
-			console.log('setting', this.scroller && this.scroller.scrollTop, 'to', scrollTop);
-		}, 0);
+			console.log(this.scroller && this.scroller.scrollTop, 'is now', scrollTop);
+		}, 1000);
 		return applied;
 	}
 
