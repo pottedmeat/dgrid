@@ -1,4 +1,5 @@
 import { v, w } from '@dojo/widget-core/d';
+import { DNode } from '@dojo/widget-core/interfaces';
 import { RegistryMixin, RegistryMixinProperties }  from '@dojo/widget-core/mixins/Registry';
 import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
@@ -13,7 +14,7 @@ export interface HeaderProperties extends ThemeableProperties, HasColumns, HasSo
 
 @theme(headerClasses)
 class Header extends HeaderBase<HeaderProperties> {
-	render() {
+	render(): DNode {
 		const {
 			onSortRequest,
 			columns,

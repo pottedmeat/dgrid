@@ -2,7 +2,7 @@ import { includes } from '@dojo/shim/array';
 import { Subscription } from '@dojo/shim/Observable';
 import { v, w } from '@dojo/widget-core/d';
 import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
-import { PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
+import { PropertiesChangeEvent, DNode } from '@dojo/widget-core/interfaces';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import DataProviderBase, { Options } from './bases/DataProviderBase';
@@ -75,7 +75,7 @@ class Grid extends GridBase<GridProperties> {
 		}
 	}
 
-	render() {
+	render(): DNode {
 		const {
 			registry,
 			data: {
