@@ -1,4 +1,4 @@
-import { from, includes } from '@dojo/shim/array';
+import { from } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
 import { v, w } from '@dojo/widget-core/d';
 import { DNode } from '@dojo/widget-core/interfaces';
@@ -11,12 +11,9 @@ import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mi
 
 import * as bodyClasses from './styles/body.css';
 
-type Sections = 'top' | 'bottom';
-
 interface RenderedDetails {
 	element?: HTMLElement;
 	height?: number;
-	section: Sections;
 	add: boolean;
 	delete: boolean;
 }
@@ -31,16 +28,11 @@ class Body extends BodyBase<BodyProperties> {
 	private scroller: HTMLElement;
 	private scrollTop = 0;
 	private firstVisibleKey: string;
-	private top: HTMLElement;
-	private bottom: HTMLElement;
 
 	private visibleKeys() {
 		// find the first visible row
 		const {
-			itemElementMap,
-			properties: {
-				items
-			}
+			itemElementMap
 		} = this;
 		const scroll = this.scroller.scrollTop;
 		const contentHeight = this.scroller.offsetHeight;
@@ -63,7 +55,6 @@ class Body extends BodyBase<BodyProperties> {
 
 	protected onScroll(event: UIEvent) {
 		const {
-			itemElementMap,
 			properties: {
 				items,
 				offset,
@@ -76,42 +67,8 @@ class Body extends BodyBase<BodyProperties> {
 
 		const visibleKeys = this.visibleKeys();
 		if (visibleKeys.length > 0) {
-			// Reposition rows
+			// Remember the first visible key
 			this.firstVisibleKey = visibleKeys[0];
-			const currentKeys: string[] = items.map((item) => {
-				return item.id;
-			});
-			const firstVisibleKey = visibleKeys[0];
-			let beforeVisible = true;
-			let section: Sections = 'top';
-			const firstBottomKey = currentKeys[Math.max(0, currentKeys.indexOf(visibleKeys[0]) - 5)];
-			for (const [ previousKey, renderedDetails ] of from(itemElementMap.entries())) {
-				if (previousKey === firstVisibleKey) {
-					beforeVisible = false;
-				}
-				if (previousKey === firstBottomKey) {
-					section = 'bottom';
-				}
-
-				const element = renderedDetails.element;
-				if (element) {
-					if (section === 'bottom') {
-						if (renderedDetails.section === 'top') {
-							// Move from top to bottom
-							// this.bottom.insertBefore(element, this.bottom.firstChild);
-							renderedDetails.section = section;
-						}
-						else if (renderedDetails.section === 'bottom') {
-							break;
-						}
-					}
-					else if (section === 'top' && renderedDetails.section === 'bottom') {
-						// Move from bottom to top
-						// this.top.appendChild(element);
-						renderedDetails.section = section;
-					}
-				}
-			}
 
 			// Request new content
 			let before = 0;
@@ -145,15 +102,7 @@ class Body extends BodyBase<BodyProperties> {
 		}
 	}
 
-	protected onElementCreated(element: HTMLElement, key: Sections | 'scroller'): void {
-		if (key === 'top') {
-			this.top = element;
-			return;
-		}
-		if (key === 'bottom') {
-			this.bottom = element;
-			return;
-		}
+	protected onElementCreated(element: HTMLElement, key: 'scroller'): void {
 		if (key === 'scroller') {
 			this.scroller = element;
 
@@ -166,10 +115,7 @@ class Body extends BodyBase<BodyProperties> {
 		this.onElementChange(element, key);
 	}
 
-	protected onElementUpdated(element: HTMLElement, key: Sections | 'scroller'): void {
-		if (key === 'top' || key === 'bottom') {
-			return;
-		}
+	protected onElementUpdated(element: HTMLElement, key: 'scroller'): void {
 		if (key === 'scroller') {
 			const {
 				firstVisibleKey,
@@ -204,7 +150,7 @@ class Body extends BodyBase<BodyProperties> {
 		this.onElementChange(element, key);
 	}
 
-	createNodeFromItem(item: ItemProperties<any>, section: Sections) {
+	createNodeFromItem(item: ItemProperties<any>) {
 		const {
 			itemElementMap,
 			properties: {
@@ -218,14 +164,10 @@ class Body extends BodyBase<BodyProperties> {
 		let renderedDetails = itemElementMap.get(key);
 		if (!renderedDetails) {
 			renderedDetails = {
-				section,
 				add: true,
 				delete: false
 			};
 			itemElementMap.set(key, renderedDetails);
-		}
-		else {
-			renderedDetails.section = section;
 		}
 
 		return v('div', {
@@ -251,16 +193,13 @@ class Body extends BodyBase<BodyProperties> {
 			}
 		} = this;
 
-		const sections = {
-			top: <DNode[]> [],
-			bottom: <DNode[]> []
-		};
+		const children: DNode[] = [];
 
 		const previousKeys = from(itemElementMap.keys());
 		if (previousKeys.length === 0) {
 			// TODO: Split when properties contain an offset
 			for (const item of items) {
-				sections.bottom.push(this.createNodeFromItem(item, 'bottom'));
+				children.push(this.createNodeFromItem(item));
 			}
 		}
 		else {
@@ -274,7 +213,6 @@ class Body extends BodyBase<BodyProperties> {
 			});
 
 			const keyPatches = diff(currentKeys, previousKeys);
-			let section: Sections = 'top';
 			for (let i = 0, il = previousKeys.length; i <= il; i++) {
 				const key = previousKeys[i];
 
@@ -283,7 +221,7 @@ class Body extends BodyBase<BodyProperties> {
 					if (keyPatch.added) {
 						for (const added of keyPatch.added) {
 							const key = currentKeys[added.to];
-							sections[section].push(this.createNodeFromItem(itemsByKey[key], section));
+							children.push(this.createNodeFromItem(itemsByKey[key]));
 
 							const updatedMeasured = itemElementMap.get(key);
 							if (updatedMeasured) {
@@ -297,7 +235,7 @@ class Body extends BodyBase<BodyProperties> {
 					const item = itemsByKey[key];
 					const renderedDetails = itemElementMap.get(key);
 					if (item) {
-						sections[section].push(this.createNodeFromItem(item, section));
+						children.push(this.createNodeFromItem(item));
 
 						const updatedMeasured = itemElementMap.get(key);
 						if (updatedMeasured) {
@@ -329,16 +267,7 @@ class Body extends BodyBase<BodyProperties> {
 				classes: this.classes(bodyClasses.scroller),
 				onscroll: this.onScroll
 			},
-			[
-				v('div', {
-					key: 'top',
-					classes: this.classes(bodyClasses.top)
-				}, sections.top),
-				v('div', {
-					key: 'bottom',
-					classes: this.classes(bodyClasses.bottom)
-				}, sections.bottom)
-			]
+			children
 		);
 	}
 }
