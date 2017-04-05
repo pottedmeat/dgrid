@@ -24,26 +24,21 @@ class Row extends RowBase<RowProperties> {
 			columns = []
 		} = this.properties;
 
-		return v('div', {
-			role: 'row',
-			classes: this.classes(rowClasses.row)
+		return v('table', {
+			role: 'presentation',
+			classes: this.classes(rowClasses.rowTable)
 		}, [
-			v('table', {
-				role: 'presentation',
-				classes: this.classes(rowClasses.rowTable)
-			}, [
-				v('tr', columns.map((column) => {
-					const { id, field } = column;
+			v('tr', columns.map((column) => {
+				const { id, field } = column;
 
-					return w<CellProperties>('cell', {
-						registry,
-						key: id,
-						column,
-						item,
-						value: item.data[ field || id ]
-					});
-				}))
-			])
+				return w<CellProperties>('cell', {
+					registry,
+					key: id,
+					column,
+					item,
+					value: item.data[ field || id ]
+				});
+			}))
 		]);
 	}
 }

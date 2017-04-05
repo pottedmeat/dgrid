@@ -19,7 +19,7 @@ const data = [
 ];
 
 const instructions: any[] = [];
-for (let i = 1; i <= 100000; i++) {
+for (let i = 1; i <= 10000; i++) {
 	const instruction = Object.create(data[Math.floor(Math.random() * data.length)]);
 	instruction.order = i;
 	instructions.push(instruction);

@@ -1,46 +1,53 @@
-import { from } from '@dojo/shim/array';
+import { from, includes } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
-import Promise from '@dojo/shim/Promise';
 import { v, w } from '@dojo/widget-core/d';
+import { DNode } from '@dojo/widget-core/interfaces';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
-import { HasColumns, HasItems, HasRangeEvent, HasOffset, HasTotalLength } from './interfaces';
+import { diff } from './compare';
+import { HasColumns, HasItems, HasRangeEvent, HasOffset, HasTotalLength, ItemProperties } from './interfaces';
 import { RowProperties } from './Row';
 import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 
 import * as bodyClasses from './styles/body.css';
 
-interface Measured {
-	element: HTMLElement;
-	height: number;
-	promise?: Promise<HTMLElement>;
+type Sections = 'top' | 'bottom';
+
+interface RenderedDetails {
+	element?: HTMLElement;
+	height?: number;
+	section: Sections;
+	add: boolean;
+	delete: boolean;
 }
+
+export const BodyBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
 export interface BodyProperties extends ThemeableProperties, HasColumns, HasItems, HasOffset, HasTotalLength, HasRangeEvent, RegistryMixinProperties { }
 
 @theme(bodyClasses)
-class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
-	private previousItemElementMap = new Map<string, Measured>();
-	private currentItemElementMap = new Map<string, Measured>();
-	private before: HTMLElement;
+class Body extends BodyBase<BodyProperties> {
+	private itemElementMap = new Map<string, RenderedDetails>();
 	private scroller: HTMLElement;
-	private content: HTMLElement;
-	private after: HTMLElement;
-	private visible: string[] = [];
+	private scrollTop = 0;
+	private firstVisibleKey: string;
+	private top: HTMLElement;
+	private bottom: HTMLElement;
 
 	private visibleKeys() {
 		// find the first visible row
 		const {
-			items
-		} = this.properties;
+			itemElementMap,
+			properties: {
+				items
+			}
+		} = this;
 		const scroll = this.scroller.scrollTop;
 		const contentHeight = this.scroller.offsetHeight;
-		const visible: string[] = this.visible = [];
-		for (let i = 0, item; (item = items[i]); i++) {
-			const key = String(item.id);
-			const measured = this.currentItemElementMap.get(key);
-			if (measured) {
-				const element = measured.element;
+		const visible: string[] = [];
+		for (const [ key, renderedDetails ] of from(itemElementMap.entries())) {
+			const element = renderedDetails.element;
+			if (element) {
 				const top = element.offsetTop;
 				const height = element.offsetHeight;
 				if ((top + height) >= scroll && top < (scroll + contentHeight)) {
@@ -56,22 +63,61 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 
 	protected onScroll(event: UIEvent) {
 		const {
-			items,
-			offset,
-			totalLength,
-			onRangeRequest
-		} = this.properties;
+			itemElementMap,
+			properties: {
+				items,
+				offset,
+				totalLength,
+				onRangeRequest
+			}
+		} = this;
 
-		const visible = this.visibleKeys();
+		this.scrollTop = this.scroller.scrollTop;
 
-		if (visible.length === 0) {
-			// TODO: completely reset when visible is empty (no overlap in data)
-		}
-		else {
+		const visibleKeys = this.visibleKeys();
+		if (visibleKeys.length > 0) {
+			// Reposition rows
+			this.firstVisibleKey = visibleKeys[0];
+			const currentKeys: string[] = items.map((item) => {
+				return item.id;
+			});
+			const firstVisibleKey = visibleKeys[0];
+			let beforeVisible = true;
+			let section: Sections = 'top';
+			const firstBottomKey = currentKeys[Math.max(0, currentKeys.indexOf(visibleKeys[0]) - 5)];
+			for (const [ previousKey, renderedDetails ] of from(itemElementMap.entries())) {
+				if (previousKey === firstVisibleKey) {
+					beforeVisible = false;
+				}
+				if (previousKey === firstBottomKey) {
+					section = 'bottom';
+				}
+
+				const element = renderedDetails.element;
+				if (element) {
+					if (section === 'bottom') {
+						if (renderedDetails.section === 'top') {
+							// Move from top to bottom
+							// this.bottom.insertBefore(element, this.bottom.firstChild);
+							renderedDetails.section = section;
+						}
+						else if (renderedDetails.section === 'bottom') {
+							break;
+						}
+					}
+					else if (section === 'top' && renderedDetails.section === 'bottom') {
+						// Move from bottom to top
+						// this.top.appendChild(element);
+						renderedDetails.section = section;
+					}
+				}
+			}
+
+			// Request new content
 			let before = 0;
 			for (let i = 0, item; (item = items[i]); i++) {
 				const key = String(item.id);
-				if (visible[0] === key) {
+				if (visibleKeys[0] === key) {
 					before = i;
 					break;
 				}
@@ -79,165 +125,204 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 
 			// 100 before and after
 			const start = Math.max(0, offset - 100 + before);
-			let count = (Math.min(before, 100) + visible.length + 100);
+			let count = (Math.min(before, 100) + visibleKeys.length + 100);
 			if (start + count > totalLength) {
 				count = (totalLength - start);
 			}
 
-			if (Math.abs(start - offset) > 25 || Math.abs(count - items.length) > 25) {
+			if (Math.abs(start - offset) > 10 || Math.abs(count - items.length) > 10) {
+				// TODO: Throttle?
+				console.log('range', start, count);
 				onRangeRequest && onRangeRequest({ start, count });
 			}
 		}
 	}
 
 	protected onElementChange(element: HTMLElement, key: string): void {
+		const renderedDetails = this.itemElementMap.get(key);
+		if (renderedDetails) {
+			renderedDetails.element = element;
+		}
+	}
+
+	protected onElementCreated(element: HTMLElement, key: Sections | 'scroller'): void {
+		if (key === 'top') {
+			this.top = element;
+			return;
+		}
+		if (key === 'bottom') {
+			this.bottom = element;
+			return;
+		}
 		if (key === 'scroller') {
 			this.scroller = element;
 
+			for (const [ itemKey, renderedDetails ] of from(this.itemElementMap.entries())) {
+				renderedDetails.add = false;
+			}
+
+			return;
+		}
+		this.onElementChange(element, key);
+	}
+
+	protected onElementUpdated(element: HTMLElement, key: Sections | 'scroller'): void {
+		if (key === 'top' || key === 'bottom') {
+			return;
+		}
+		if (key === 'scroller') {
 			const {
-				previousItemElementMap,
-				currentItemElementMap,
-				properties: {
-					items
-				}
+				firstVisibleKey,
+				itemElementMap,
+				scroller
 			} = this;
 
-			const visibleKeys = this.visibleKeys();
-			const previousKeys = from(previousItemElementMap.keys());
-			const currentKeys = items.map((item) => { return String(item.id); });
-			let before = 0;
-			let after = 0;
-			for (const visibleKey of visibleKeys) {
-				const overlap = currentKeys.indexOf(visibleKey);
-				if (overlap !== -1) {
-					// the first key in common between visible items and current items
-					for (const previousKey of previousKeys) {
-						if (previousKey === visibleKey) {
-							break;
-						}
-						if (currentKeys.indexOf(previousKey) === -1) {
-							// this node no longer exists
-							const measured = previousItemElementMap.get(previousKey);
-							if (measured) {
-								before += measured.height;
-							}
-						}
-					}
-					for (let i = 0; i < overlap; i++) {
-						const currentKey = currentKeys[i];
-						if (previousKeys.indexOf(currentKey) === -1) {
-							// this node is new
-							const measured = currentItemElementMap.get(currentKey);
-							if (measured) {
-								before -= measured.element.offsetHeight;
-							}
-						}
-					}
-
-					let found = false;
-					for (const previousKey of previousKeys) {
-						if (found) {
-							if (currentKeys.indexOf(previousKey) === -1) {
-								// this node no longer exists
-								const measured = previousItemElementMap.get(previousKey);
-								if (measured) {
-									after -= measured.height;
-								}
-							}
-						}
-						else if (previousKey === visibleKey) {
-							found = true;
-						}
-					}
-					for (let i = (overlap + 1); i < currentKeys.length; i++) {
-						const currentKey = currentKeys[i];
-						if (previousKeys.indexOf(currentKey) === -1) {
-							// this node is new
-							const measured = currentItemElementMap.get(currentKey);
-							if (measured) {
-								after += measured.element.offsetHeight;
-							}
-						}
-					}
-
-					break;
+			let scrollTop = this.scrollTop;
+			let beforeVisible = true;
+			for (const [ itemKey, renderedDetails ] of from(itemElementMap.entries())) {
+				if (itemKey === firstVisibleKey) {
+					beforeVisible = false;
 				}
+
+				if (beforeVisible) {
+					if (renderedDetails.add && renderedDetails.element) {
+						scrollTop += renderedDetails.element.offsetHeight;
+					}
+					if (renderedDetails.delete) {
+						itemElementMap.delete(itemKey);
+						scrollTop -= (renderedDetails.height || 0);
+					}
+				}
+
+				renderedDetails.add = false;
 			}
 
-			// TODO: use these numbers
-			console.log('before:', before, 'after:', after);
-			this.before.style.height = (this.before.offsetHeight + before) + 'px';
-			this.after.style.height = (this.after.offsetHeight + after) + "px";
-
-			const newItemElementMap = new Map<string, Measured>();
-			for (const item of items) {
-				const key = String(item.id);
-				const measured = currentItemElementMap.get(key);
-				if (measured) {
-					newItemElementMap.set(key, measured);
-				}
-			}
-			this.previousItemElementMap = currentItemElementMap;
-			this.currentItemElementMap = newItemElementMap;
+			scroller.scrollTop = scrollTop;
 
 			return;
 		}
+		this.onElementChange(element, key);
+	}
 
-		let measured = this.currentItemElementMap.get(key);
-		if (!measured) {
-			measured = {
-				element,
-				height: element.offsetHeight
+	createNodeFromItem(item: ItemProperties<any>, section: Sections) {
+		const {
+			itemElementMap,
+			properties: {
+				columns,
+				registry,
+				theme
+			}
+		} = this;
+
+		const key = item.id;
+		let renderedDetails = itemElementMap.get(key);
+		if (!renderedDetails) {
+			renderedDetails = {
+				section,
+				add: true,
+				delete: false
 			};
+			itemElementMap.set(key, renderedDetails);
 		}
 		else {
-			measured.element = element;
-			measured.height = element.offsetHeight;
+			renderedDetails.section = section;
 		}
-		this.currentItemElementMap.set(key, measured);
-	}
 
-	protected onElementCreated(element: HTMLElement, key: string): void {
-		if (key === 'before') {
-			// element.style.height = "1000px";
-			this.before = element;
-			return;
-		}
-		if (key === 'content') {
-			this.content = element;
-			return;
-		}
-		if (key === 'after') {
-			element.style.height = "10000px";
-			this.after = element;
-			return;
-		}
-		this.onElementChange(element, key);
-	}
-
-	protected onElementUpdated(element: HTMLElement, key: string): void {
-		if (key === 'before' || key === 'content' || key === 'after') {
-			return;
-		}
-		this.onElementChange(element, key);
-	}
-
-	__render__() {
-		const scrollTop = this.scroller && this.scroller.scrollTop;
-		const applied = super.__render__.apply(this, arguments);
-		setTimeout(() => {
-			console.log(this.scroller && this.scroller.scrollTop, 'is now', scrollTop);
-		}, 1000);
-		return applied;
+		return v('div', {
+			key,
+			role: 'row',
+			classes: this.classes(bodyClasses.row)
+		}, [
+			w<RowProperties>('row', {
+				key,
+				item,
+				columns,
+				registry,
+				theme
+			})
+		]);
 	}
 
 	render() {
 		const {
-			items,
-			columns,
-			registry,
-			theme
-		} = this.properties;
+			itemElementMap,
+			properties: {
+				items
+			}
+		} = this;
+
+		const sections = {
+			top: <DNode[]> [],
+			bottom: <DNode[]> []
+		};
+
+		const previousKeys = from(itemElementMap.keys());
+		if (previousKeys.length === 0) {
+			// TODO: Split when properties contain an offset
+			for (const item of items) {
+				sections.bottom.push(this.createNodeFromItem(item, 'bottom'));
+			}
+		}
+		else {
+			const updatedItemElementMap = new Map<string, RenderedDetails>();
+
+			const itemsByKey: { [key: string]: ItemProperties<any> } = {};
+			const currentKeys: string[] = items.map((item) => {
+				const key = item.id;
+				itemsByKey[key] = item;
+				return key;
+			});
+
+			const keyPatches = diff(currentKeys, previousKeys);
+			let section: Sections = 'top';
+			for (let i = 0, il = previousKeys.length; i <= il; i++) {
+				const key = previousKeys[i];
+
+				const keyPatch = keyPatches[i];
+				if (keyPatch) {
+					if (keyPatch.added) {
+						for (const added of keyPatch.added) {
+							const key = currentKeys[added.to];
+							sections[section].push(this.createNodeFromItem(itemsByKey[key], section));
+
+							const updatedMeasured = itemElementMap.get(key);
+							if (updatedMeasured) {
+								updatedItemElementMap.set(key, updatedMeasured);
+							}
+						}
+					}
+				}
+
+				if (i < il) {
+					const item = itemsByKey[key];
+					const renderedDetails = itemElementMap.get(key);
+					if (item) {
+						sections[section].push(this.createNodeFromItem(item, section));
+
+						const updatedMeasured = itemElementMap.get(key);
+						if (updatedMeasured) {
+							updatedItemElementMap.set(key, updatedMeasured);
+						}
+					}
+					else {
+						// this item no longer appears in current data
+						if (renderedDetails) {
+							renderedDetails.delete = true;
+							if (renderedDetails.element) {
+								renderedDetails.height = renderedDetails.element.offsetHeight;
+							}
+
+							const updatedMeasured = itemElementMap.get(key);
+							if (updatedMeasured) {
+								updatedItemElementMap.set(key, updatedMeasured);
+							}
+						}
+					}
+				}
+			}
+
+			this.itemElementMap = updatedItemElementMap;
+		}
 
 		return v('div', {
 				key: 'scroller',
@@ -246,31 +331,13 @@ class Body extends ThemeableMixin(RegistryMixin(WidgetBase))<BodyProperties> {
 			},
 			[
 				v('div', {
-					key: 'content'
-				},
-				[
-					v('div', {
-						key: 'before'
-					}),
-					...items.map((item) => {
-						return v('div', {
-							key: item.id,
-							role: 'row',
-							classes: this.classes(bodyClasses.row)
-						}, [
-							w('row', <RowProperties> {
-								key: item.id,
-								item,
-								columns,
-								registry,
-								theme
-							})
-						]);
-					}),
-					v('div', {
-						key: 'after'
-					})
-				])
+					key: 'top',
+					classes: this.classes(bodyClasses.top)
+				}, sections.top),
+				v('div', {
+					key: 'bottom',
+					classes: this.classes(bodyClasses.bottom)
+				}, sections.bottom)
 			]
 		);
 	}

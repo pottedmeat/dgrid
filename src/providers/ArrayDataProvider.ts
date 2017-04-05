@@ -8,7 +8,7 @@ export interface ArrayDataProviderOptions<T> extends Options {
 
 function expand(items: any[], idProperty: string, array = <ItemProperties<any>[]> []) {
 	for (const item of items) {
-		const id = item[idProperty];
+		const id = String(item[idProperty]);
 		array.push({
 			id,
 			data: item
