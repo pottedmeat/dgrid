@@ -135,12 +135,14 @@ class Body extends BodyBase<BodyProperties> {
 						scrollTop += renderedDetails.element.offsetHeight;
 					}
 					if (renderedDetails.delete) {
-						itemElementMap.delete(itemKey);
 						scrollTop -= (renderedDetails.height || 0);
 					}
 				}
 
 				renderedDetails.add = false;
+				if (renderedDetails.delete) {
+					itemElementMap.delete(itemKey);
+				}
 			}
 
 			scroller.scrollTop = scrollTop;
@@ -245,10 +247,10 @@ class Body extends BodyBase<BodyProperties> {
 					else {
 						// this item no longer appears in current data
 						if (renderedDetails) {
-							renderedDetails.delete = true;
-							if (renderedDetails.element) {
+							if (!renderedDetails.delete && renderedDetails.element) {
 								renderedDetails.height = renderedDetails.element.offsetHeight;
 							}
+							renderedDetails.delete = true;
 
 							const updatedMeasured = itemElementMap.get(key);
 							if (updatedMeasured) {
