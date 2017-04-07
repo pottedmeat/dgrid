@@ -12,7 +12,8 @@ export const CellBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
 export interface CellProperties extends ThemeableProperties, HasValue, HasContent, HasColumn, HasItem, RegistryMixinProperties { }
 
-@theme({ ...cellCss, ...css })
+@theme(cellCss)
+@theme(css)
 class Cell extends CellBase<CellProperties> {
 	render(): DNode {
 		const {
