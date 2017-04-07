@@ -5,7 +5,7 @@ import { DNode } from '@dojo/widget-core/interfaces';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { diff } from './compare';
-import { HasColumns, HasItems, HasRangeEvent, HasOffset, HasTotalLength, ItemProperties } from './interfaces';
+import { HasColumns, HasItems, HasSliceEvent, HasOffset, HasTotalLength, ItemProperties } from './interfaces';
 import { RowProperties } from './Row';
 import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 
@@ -20,7 +20,7 @@ interface RenderedDetails {
 
 export const BodyBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
-export interface BodyProperties extends ThemeableProperties, HasColumns, HasItems, HasOffset, HasTotalLength, HasRangeEvent, RegistryMixinProperties { }
+export interface BodyProperties extends ThemeableProperties, HasColumns, HasItems, HasOffset, HasTotalLength, HasSliceEvent, RegistryMixinProperties { }
 
 @theme(bodyClasses)
 class Body extends BodyBase<BodyProperties> {
@@ -59,7 +59,7 @@ class Body extends BodyBase<BodyProperties> {
 				items,
 				offset,
 				totalLength,
-				onRangeRequest
+				onSliceRequest
 			}
 		} = this;
 
@@ -89,8 +89,8 @@ class Body extends BodyBase<BodyProperties> {
 
 			if (Math.abs(start - offset) > 10 || Math.abs(count - items.length) > 10) {
 				// TODO: Throttle?
-				console.log('range', start, count);
-				onRangeRequest && onRangeRequest({ start, count });
+				console.log('slice', start, count);
+				onSliceRequest && onSliceRequest({ start, count });
 			}
 		}
 	}

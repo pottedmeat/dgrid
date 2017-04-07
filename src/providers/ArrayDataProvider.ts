@@ -24,7 +24,7 @@ class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<
 				idProperty = 'id',
 				data = []
 			},
-			range,
+			slice,
 			sort = []
 		} = state;
 		let items = data;
@@ -51,9 +51,9 @@ class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<
 			items: expand(items, idProperty),
 			totalLength: data.length
 		};
-		if (range) {
-			built.items = built.items.slice(range.start, range.start + range.count);
-			built.offset = range.start;
+		if (slice) {
+			built.items = built.items.slice(slice.start, slice.start + slice.count);
+			built.offset = slice.start;
 		}
 		return built;
 	}

@@ -91,7 +91,7 @@ class Grid extends GridBase<GridProperties> {
 			}
 		} = this;
 		const {
-			range: onRangeRequest,
+			slice: onSliceRequest,
 			sort: onSortRequest
 		} = dataProvider;
 
@@ -113,7 +113,7 @@ class Grid extends GridBase<GridProperties> {
 				items,
 				offset,
 				totalLength,
-				onRangeRequest: onRangeRequest && onRangeRequest.bind(dataProvider)
+				onSliceRequest: onSliceRequest && onSliceRequest.bind(dataProvider)
 			})
 		]);
 	}

@@ -1,7 +1,7 @@
 import { WidgetProperties, WidgetBaseConstructor } from '@dojo/widget-core/interfaces';
 import { RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 
-export interface RangeDetails {
+export interface SliceDetails {
 	start: number;
 	count: number;
 }
@@ -76,6 +76,6 @@ export interface HasTotalLength {
 	totalLength: number;
 }
 
-export interface HasRangeEvent {
-	onRangeRequest(rangeDetail: RangeDetails): void;
+export interface HasSliceEvent {
+	onSliceRequest(sliceDetails: SliceDetails): void;
 }

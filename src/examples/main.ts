@@ -29,7 +29,7 @@ const dataProvider = new ArrayDataProvider({
 	idProperty: 'order',
 	data: instructions,
 	configuration: {
-		range: { start: 0, count: 100 }
+		slice: { start: 0, count: 100 }
 	}
 });
 

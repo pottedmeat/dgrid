@@ -1,8 +1,8 @@
 import { Observable, Observer } from '@dojo/core/Observable';
-import { SortDetails, DataProperties, RangeDetails } from '../interfaces';
+import { SortDetails, DataProperties, SliceDetails } from '../interfaces';
 
 export interface Configuration {
-	range?: RangeDetails;
+	slice?: SliceDetails;
 	sort?: SortDetails | SortDetails[];
 }
 
@@ -13,7 +13,7 @@ export interface Options {
 
 export interface DataProviderState<O extends Options> {
 	options: O;
-	range?: RangeDetails;
+	slice?: SliceDetails;
 	sort?: SortDetails[];
 }
 
@@ -27,13 +27,13 @@ class DataProviderBase<T, O extends Options> {
 	constructor(options: O) {
 		const {
 			configuration: {
-				range = undefined,
+				slice = undefined,
 				sort = []
 			} = {}
 		} = options;
 		this.state = {
 			options: options || {},
-			range,
+			slice,
 			sort: Array.isArray(sort) ? sort : [ sort ]
 		};
 		this.observable = new Observable((observer: Observer<DataProperties<T>>) => {
@@ -51,8 +51,8 @@ class DataProviderBase<T, O extends Options> {
 		return { items: [] };
 	}
 
-	configure({ range, sort = [] }: Configuration) {
-		this.state.range = range;
+	configure({ slice, sort = [] }: Configuration) {
+		this.state.slice = slice;
 		this.state.sort = Array.isArray(sort) ? sort : [ sort ];
 		this.updateData();
 	}
@@ -61,8 +61,8 @@ class DataProviderBase<T, O extends Options> {
 		return this.observable;
 	}
 
-	range(range: RangeDetails) {
-		this.state.range = range;
+	slice(slice: SliceDetails) {
+		this.state.slice = slice;
 		this.updateData();
 	}
 
