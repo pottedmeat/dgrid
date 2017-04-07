@@ -6,30 +6,31 @@ import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { HeaderCellProperties } from './HeaderCell';
 import { HasColumns, HasSortDetails, HasSortEvent } from './interfaces';
 
-import * as headerClasses from './styles/header.css';
+import * as css from './styles/header.m.css';
+import * as tableCss from './styles/shared/table.m.css';
 
 export const HeaderBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
 export interface HeaderProperties extends ThemeableProperties, HasColumns, HasSortDetails, HasSortEvent, RegistryMixinProperties { }
 
-@theme(headerClasses)
+@theme({ ...tableCss, ...css })
 class Header extends HeaderBase<HeaderProperties> {
 	render(): DNode {
 		const {
-			onSortRequest,
 			columns,
-			sortDetails = [],
+			onSortRequest,
 			registry,
+			sortDetails = [],
 			theme
 		} = this.properties;
 
 		return v('div', {
-			classes: this.classes(headerClasses.header, headerClasses.row),
+			classes: this.classes(css.header, css.headerRow),
 			role: 'row'
 		}, [
 			v('table', {
 				role: 'presentation',
-				classes: this.classes(headerClasses.rowTable)
+				classes: this.classes(tableCss.table, css.headerTable)
 			}, [
 				v('tr', columns.map((column) => {
 					let sortDetail;
@@ -41,11 +42,11 @@ class Header extends HeaderBase<HeaderProperties> {
 					}
 
 					return w<HeaderCellProperties>('header-cell', {
-						key: column.id,
 						column,
-						sortDetail,
+						key: column.id,
 						onSortRequest,
 						registry,
+						sortDetail,
 						theme
 					});
 				}))

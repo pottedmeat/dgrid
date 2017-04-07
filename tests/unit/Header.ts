@@ -1,16 +1,16 @@
-import * as registerSuite from 'intern/lib/interfaces/object';
-import { assert } from 'chai';
 import { VNode } from '@dojo/interfaces/vdom';
-import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
-import { spy, stub, SinonSpy } from 'sinon';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
+import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
+import { assert } from 'chai';
+import * as registerSuite from 'intern/lib/interfaces/object';
+import { SinonSpy, spy, stub } from 'sinon';
+import { cleanProperties, spyOnWidget } from '../support/util';
 import Header from '../../src/Header';
-import { spyOnWidget, cleanProperties } from './util';
 import { HeaderCellProperties } from '../../src/HeaderCell';
 
-let widgetBaseSpy: SinonSpy;
-let setProperties: SinonSpy | null = null;
 let mockRegistry: WidgetRegistry;
+let setProperties: SinonSpy | null = null;
+let widgetBaseSpy: SinonSpy;
 
 registerSuite({
 	name: 'Header',

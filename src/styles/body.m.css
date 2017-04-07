@@ -1,4 +1,6 @@
 .scroller {
+    overflow-x: hidden;
+    overflow-y: scroll;
     padding-bottom: 0px;
 }
 

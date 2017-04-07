@@ -6,13 +6,13 @@ import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { HasColumns, HasItems } from './interfaces';
 import { RowProperties } from './Row';
 
-import * as bodyClasses from './styles/body.css';
+import * as css from './styles/body.m.css';
 
 export const BodyBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
 export interface BodyProperties extends ThemeableProperties, HasColumns, HasItems, RegistryMixinProperties { }
 
-@theme(bodyClasses)
+@theme(css)
 class Body extends BodyBase<BodyProperties> {
 	render(): DNode {
 		const {
@@ -23,11 +23,11 @@ class Body extends BodyBase<BodyProperties> {
 		} = this.properties;
 
 		return v('div', {
-				classes: this.classes(bodyClasses.scroller)
+				classes: this.classes(css.scroller)
 			},
 			[
 				v('div', {
-					classes: this.classes(bodyClasses.content)
+					classes: this.classes(css.content)
 				},
 				items.map((item) => {
 					return w<RowProperties>('row', {

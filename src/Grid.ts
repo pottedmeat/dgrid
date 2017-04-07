@@ -13,7 +13,7 @@ import HeaderCell from './HeaderCell';
 import { DataProperties, HasColumns } from './interfaces';
 import Row from './Row';
 
-import * as gridClasses from './styles/grid.css';
+import * as css from './styles/grid.m.css';
 
 export const GridBase = ThemeableMixin(WidgetBase);
 
@@ -40,7 +40,7 @@ function createRegistry(partialRegistry?: WidgetRegistry) {
 	return registry;
 }
 
-@theme(gridClasses)
+@theme(css)
 class Grid extends GridBase<GridProperties> {
 	private data: DataProperties<any>;
 	private subscription: Subscription;
@@ -52,7 +52,7 @@ class Grid extends GridBase<GridProperties> {
 		this.registry = createRegistry();
 	}
 
-	@onPropertiesChanged
+	@onPropertiesChanged()
 	protected onPropertiesChanged(evt: PropertiesChangeEvent<this, GridProperties>) {
 		let {
 			dataProvider,
@@ -93,7 +93,7 @@ class Grid extends GridBase<GridProperties> {
 		} = dataProvider;
 
 		return v('div', {
-			classes: this.classes(gridClasses.grid),
+			classes: this.classes(css.grid),
 			role: 'grid'
 		}, [
 			w<HeaderProperties>('header', {

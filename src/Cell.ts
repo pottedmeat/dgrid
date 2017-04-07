@@ -1,17 +1,18 @@
+import WidgetBase from '@dojo/widget-core/WidgetBase';
+import { RegistryMixin, RegistryMixinProperties }  from '@dojo/widget-core/mixins/Registry';
 import { v } from '@dojo/widget-core/d';
 import { DNode } from '@dojo/widget-core/interfaces';
-import { RegistryMixin, RegistryMixinProperties }  from '@dojo/widget-core/mixins/Registry';
-import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
-import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { HasContent, HasColumn, HasItem, HasValue } from './interfaces';
+import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 
-import * as cellClasses from './styles/cell.css';
+import * as cellCss from './styles/shared/cell.m.css';
+import * as css from './styles/cell.m.css';
 
 export const CellBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
 export interface CellProperties extends ThemeableProperties, HasValue, HasContent, HasColumn, HasItem, RegistryMixinProperties { }
 
-@theme(cellClasses)
+@theme({ ...cellCss, ...css })
 class Cell extends CellBase<CellProperties> {
 	render(): DNode {
 		const {
@@ -20,7 +21,7 @@ class Cell extends CellBase<CellProperties> {
 
 		return v('td', {
 			role: 'gridcell',
-			classes: this.classes(cellClasses.cell)
+			classes: this.classes(cellCss.cell, css.rowCell)
 		}, [
 			content
 		]);
