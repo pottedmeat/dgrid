@@ -12,25 +12,31 @@ import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mi
 import * as bodyClasses from './styles/body.css';
 
 interface RenderedDetails {
-	element?: HTMLElement;
-	height?: number;
 	add: boolean;
 	delete: boolean;
+	element?: HTMLElement;
+	index: number;
+	height?: number;
 }
 
 export const BodyBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
 export interface BodyProperties extends ThemeableProperties, HasColumns, HasItems, HasOffset, HasTotalLength, HasSliceEvent, RegistryMixinProperties { }
 
+const margin = 10000;
+const preload = 100;
+const drift = 25;
+
 @theme(bodyClasses)
 class Body extends BodyBase<BodyProperties> {
 	private itemElementMap = new Map<string, RenderedDetails>();
 	private scroller: HTMLElement;
 	private scrollTop = 0;
+	private marginTop: RenderedDetails;
 	private firstVisibleKey: string;
 
 	private visibleKeys() {
-		// find the first visible row
+		// TODO: Use the intersection observer API
 		const {
 			itemElementMap
 		} = this;
@@ -55,10 +61,11 @@ class Body extends BodyBase<BodyProperties> {
 
 	protected onScroll(event: UIEvent) {
 		const {
+			itemElementMap,
 			properties: {
 				items,
-				offset,
 				totalLength,
+				offset,
 				onSliceRequest
 			}
 		} = this;
@@ -66,36 +73,51 @@ class Body extends BodyBase<BodyProperties> {
 		this.scrollTop = this.scroller.scrollTop;
 
 		const visibleKeys = this.visibleKeys();
-		if (visibleKeys.length > 0) {
+		if (visibleKeys.length === 0) {
+			// scrolled too fast
+			console.log('scrolled past all loaded rows');
+			const keys = from(itemElementMap.keys());
+			const renderedDetails = itemElementMap.get(keys[preload]); // the intended top-of-viewport item
+			if (renderedDetails && renderedDetails.element) {
+				this.scroller.scrollTop = renderedDetails.element.offsetTop;
+			}
+		}
+		else {
 			// Remember the first visible key
-			this.firstVisibleKey = visibleKeys[0];
-
-			// Request new content
-			let before = 0;
-			for (let i = 0, item; (item = items[i]); i++) {
-				const key = String(item.id);
-				if (visibleKeys[0] === key) {
-					before = i;
-					break;
+			this.firstVisibleKey = visibleKeys[ 0 ];
+			const renderedDetails = itemElementMap.get(this.firstVisibleKey);
+			if (renderedDetails) {
+				// Request new content
+				// preload before and after
+				const start = Math.max(0, renderedDetails.index - preload);
+				let count = (Math.min(renderedDetails.index, preload) + visibleKeys.length + preload);
+				if (start + count > totalLength) {
+					count = (totalLength - start);
 				}
-			}
 
-			// 100 before and after
-			const start = Math.max(0, offset - 100 + before);
-			let count = (Math.min(before, 100) + visibleKeys.length + 100);
-			if (start + count > totalLength) {
-				count = (totalLength - start);
-			}
-
-			if (Math.abs(start - offset) > 10 || Math.abs(count - items.length) > 10) {
-				// TODO: Throttle?
-				console.log('slice', start, count);
-				onSliceRequest && onSliceRequest({ start, count });
+				// check to see if the data we need to load is
+				// different enough from what we already have
+				if (start === 0 || Math.abs(start - offset) > drift || Math.abs(count - items.length) > drift || (start + count) === items.length) {
+					// TODO: Throttle?
+					console.log('slice', start, count);
+					onSliceRequest && onSliceRequest({ start, count });
+				}
 			}
 		}
 	}
 
 	protected onElementChange(element: HTMLElement, key: string): void {
+		if (key === 'marginTop') {
+			if (this.marginTop) {
+				this.marginTop.element = element;
+			}
+			return;
+		}
+
+		if (key === 'marginBottom') {
+			return;
+		}
+
 		const renderedDetails = this.itemElementMap.get(key);
 		if (renderedDetails) {
 			renderedDetails.element = element;
@@ -145,6 +167,18 @@ class Body extends BodyBase<BodyProperties> {
 				}
 			}
 
+			const marginTop = this.marginTop;
+			if (marginTop) {
+				if (marginTop.add && marginTop.element) {
+					scrollTop += marginTop.element.offsetHeight;
+					marginTop.add = false;
+				}
+				if (marginTop.delete) {
+					scrollTop -= (marginTop.height || 0);
+					delete this.marginTop;
+				}
+			}
+
 			scroller.scrollTop = scrollTop;
 
 			return;
@@ -152,7 +186,7 @@ class Body extends BodyBase<BodyProperties> {
 		this.onElementChange(element, key);
 	}
 
-	createNodeFromItem(item: ItemProperties<any>) {
+	createNodeFromItem(item: ItemProperties<any>, index: number) {
 		const {
 			itemElementMap,
 			properties: {
@@ -167,9 +201,13 @@ class Body extends BodyBase<BodyProperties> {
 		if (!renderedDetails) {
 			renderedDetails = {
 				add: true,
-				delete: false
+				delete: false,
+				index: index
 			};
 			itemElementMap.set(key, renderedDetails);
+		}
+		else {
+			renderedDetails.index = index;
 		}
 
 		return v('div', {
@@ -191,7 +229,9 @@ class Body extends BodyBase<BodyProperties> {
 		const {
 			itemElementMap,
 			properties: {
-				items
+				items,
+				offset,
+				totalLength
 			}
 		} = this;
 
@@ -200,17 +240,17 @@ class Body extends BodyBase<BodyProperties> {
 		const previousKeys = from(itemElementMap.keys());
 		if (previousKeys.length === 0) {
 			// TODO: Split when properties contain an offset
-			for (const item of items) {
-				children.push(this.createNodeFromItem(item));
+			for (let i = 0, item; (item = items[i]); i++) {
+				children.push(this.createNodeFromItem(item, i));
 			}
 		}
 		else {
 			const updatedItemElementMap = new Map<string, RenderedDetails>();
 
-			const itemsByKey: { [key: string]: ItemProperties<any> } = {};
-			const currentKeys: string[] = items.map((item) => {
+			const itemsByKey: { [key: string]: DNode } = {};
+			const currentKeys: string[] = items.map((item, index) => {
 				const key = item.id;
-				itemsByKey[key] = item;
+				itemsByKey[key] = this.createNodeFromItem(item, (offset + index));
 				return key;
 			});
 
@@ -223,7 +263,7 @@ class Body extends BodyBase<BodyProperties> {
 					if (keyPatch.added) {
 						for (const added of keyPatch.added) {
 							const key = currentKeys[added.to];
-							children.push(this.createNodeFromItem(itemsByKey[key]));
+							children.push(itemsByKey[key]);
 
 							const updatedMeasured = itemElementMap.get(key);
 							if (updatedMeasured) {
@@ -237,7 +277,7 @@ class Body extends BodyBase<BodyProperties> {
 					const item = itemsByKey[key];
 					const renderedDetails = itemElementMap.get(key);
 					if (item) {
-						children.push(this.createNodeFromItem(item));
+						children.push(item);
 
 						const updatedMeasured = itemElementMap.get(key);
 						if (updatedMeasured) {
@@ -262,6 +302,38 @@ class Body extends BodyBase<BodyProperties> {
 			}
 
 			this.itemElementMap = updatedItemElementMap;
+		}
+
+		let marginTop = this.marginTop;
+		if (offset > 0) {
+			if (!marginTop) {
+				marginTop = this.marginTop = {
+					add: true,
+					delete: false,
+					index: -1
+				};
+			}
+			children.unshift(v('div', {
+				key: 'marginTop',
+				styles: {
+					height: (margin + 'px')
+				}
+			}));
+		}
+		else if (marginTop) {
+			if (marginTop.element) {
+				marginTop.height = marginTop.element.offsetHeight;
+			}
+			marginTop.delete = true;
+		}
+
+		if (offset + items.length + 1 < totalLength) {
+			children.push(v('div', {
+				key: 'marginBottom',
+				styles: {
+					height: (margin + 'px')
+				}
+			}));
 		}
 
 		return v('div', {
