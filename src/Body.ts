@@ -81,6 +81,9 @@ class Body extends BodyBase<BodyProperties> {
 			if (renderedDetails && renderedDetails.element) {
 				this.scroller.scrollTop = renderedDetails.element.offsetTop;
 			}
+
+			// TODO: Estimate what row they scrolled to
+			// and reload from scratch
 		}
 		else {
 			// Remember the first visible key
