@@ -1,4 +1,4 @@
-import { v, w } from '@dojo/widget-core/d';
+import { registry as dRegistry, v, w } from '@dojo/widget-core/d';
 import { WidgetProperties } from '@dojo/widget-core/interfaces';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
@@ -7,7 +7,7 @@ import { DNode } from '@dojo/widget-core/interfaces';
 import { CellProperties } from './Cell';
 import { HasColumns, ItemProperties } from './interfaces';
 
-import * as rowClasses from './styles/row.css';
+import * as rowClasses from './styles/row.m.css';
 
 export const RowBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
@@ -19,10 +19,12 @@ export interface RowProperties extends WidgetProperties, HasColumns, RegistryMix
 class Row extends RowBase<RowProperties> {
 	render(): DNode {
 		const {
-			registry,
-			item,
-			columns = []
-		} = this.properties;
+			properties: {
+				item,
+				columns = []
+			},
+			registry = dRegistry
+		} = this;
 
 		return v('table', {
 			role: 'presentation',

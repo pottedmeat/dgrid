@@ -5,7 +5,7 @@ import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mi
 import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { HasValue, HasColumn, HasItem } from './interfaces';
 
-import * as cellClasses from './styles/cell.css';
+import * as cellClasses from './styles/cell.m.css';
 
 export const CellBase = ThemeableMixin(RegistryMixin(WidgetBase));
 

@@ -68,17 +68,19 @@ export function diff<T, U>(b: any, a: any, options: DiffOptions = {}): any {
 			return getIdentity(object, options);
 		});
 		const aSearch = aIds.slice(0);
+		const aLength = aIds.length;
 		const bArray: any[] = <any> b;
 		const bIds = bArray.map((object) => {
 			return getIdentity(object, options);
 		});
 		const bSearch = bIds.slice(0);
+		const bLength = bIds.length;
 		let removed: ArrayChangeRemove[] = [];
 		let added: ArrayChangeAdd[] = [];
 		let aIndex = 0;
 		let bIndex = 0;
 		let matched = -1;
-		for (const aLength = aIds.length, bLength = bIds.length; aIndex < aLength || bIndex < bLength; ) {
+		for (; aIndex < aLength || bIndex < bLength; ) {
 			let aId = aIds[aIndex];
 			let bId = bIds[bIndex];
 			if (aId === bId && aIndex < aLength && bIndex < bLength && aSearch[aIndex] !== used) {
@@ -225,7 +227,7 @@ export function diff<T, U>(b: any, a: any, options: DiffOptions = {}): any {
 				}
 			}
 		}
-		if (matched !== -1 && (removed.length || added.length)) {
+		if (removed.length || added.length) {
 			patch[matched + 1] = {
 				type: Type.Splice,
 				removed: removed,

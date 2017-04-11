@@ -6,11 +6,12 @@ export interface ArrayDataProviderOptions<T> extends Options {
 	data: T[];
 }
 
-function expand(items: any[], idProperty: string, array = <ItemProperties<any>[]> []) {
+function expand(items: any[], idProperty: string, index = 0, array = <ItemProperties<any>[]> []) {
 	for (const item of items) {
 		const id = String(item[idProperty]);
 		array.push({
 			id,
+			index: index++,
 			data: item
 		});
 	}

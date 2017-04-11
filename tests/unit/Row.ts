@@ -33,6 +33,7 @@ registerSuite({
 			],
 			item: {
 				id: '1',
+				index: 0,
 				data: { foo: 'bar' }
 			}
 		};

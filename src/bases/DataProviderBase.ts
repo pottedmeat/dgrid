@@ -43,8 +43,6 @@ class DataProviderBase<T, O extends Options> {
 			}
 		});
 		this.observers = [];
-
-		this.updateData();
 	}
 
 	buildData(state: DataProviderState<O>): DataProperties<T> {

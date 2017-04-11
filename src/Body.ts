@@ -1,15 +1,20 @@
-import { from } from '@dojo/shim/array';
+import { from, includes } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
-import { v, w } from '@dojo/widget-core/d';
-import { DNode } from '@dojo/widget-core/interfaces';
+import { registry as dRegistry, v, w } from '@dojo/widget-core/d';
+import diffProperties, { DiffType } from '@dojo/widget-core/diff';
+import { DNode, PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
-import WidgetBase from '@dojo/widget-core/WidgetBase';
+import WidgetBase, { diffProperty, onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import { diff } from './compare';
-import { HasColumns, HasItems, HasSliceEvent, HasOffset, HasTotalLength, ItemProperties } from './interfaces';
+import {
+	HasColumns, HasItems, HasSliceEvent, HasOffset, HasTotalLength, ItemProperties,
+	HasScrolledTo, HasEstimatedRowHeight
+} from './interfaces';
+import { ScrolledTo } from './Grid';
 import { RowProperties } from './Row';
 import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 
-import * as bodyClasses from './styles/body.css';
+import * as bodyClasses from './styles/body.m.css';
 
 interface RenderedDetails {
 	add: boolean;
@@ -19,15 +24,26 @@ interface RenderedDetails {
 	height?: number;
 }
 
+export function diffPropertyScrolledTo(previousProperty: ScrolledTo, newProperty: ScrolledTo) {
+	if (newProperty) {
+		return diffProperties('scrolledTo', DiffType.SHALLOW, previousProperty, newProperty);
+	}
+	return {
+		changed: Boolean(previousProperty),
+		value: undefined
+	};
+}
+
 export const BodyBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
-export interface BodyProperties extends ThemeableProperties, HasColumns, HasItems, HasOffset, HasTotalLength, HasSliceEvent, RegistryMixinProperties { }
+export interface BodyProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasItems, HasOffset, HasTotalLength, HasScrolledTo, HasSliceEvent, RegistryMixinProperties { }
 
 const margin = 10000;
-const preload = 100;
-const drift = 25;
+const preload = 10;
+const drift = 2;
 
 @theme(bodyClasses)
+@diffProperty('scrolledTo', DiffType.CUSTOM, diffPropertyScrolledTo)
 class Body extends BodyBase<BodyProperties> {
 	private itemElementMap = new Map<string, RenderedDetails>();
 	private scroller: HTMLElement;
@@ -35,13 +51,81 @@ class Body extends BodyBase<BodyProperties> {
 	private marginTop: RenderedDetails;
 	private firstVisibleKey: string;
 
+	@onPropertiesChanged()
+	onPropertiesChanged(evt: PropertiesChangeEvent<this, BodyProperties>) {
+		const {
+			scrolledTo
+		} = evt.properties;
+		const {
+			itemElementMap,
+			properties: {
+				items,
+				onSliceRequest
+			},
+			scroller
+		} = this;
+
+		if (includes(evt.changedPropertyKeys, 'scrolledTo') && scrolledTo) {
+			// TODO: clear this value somehow
+
+			const index = scrolledTo.index;
+			for (const item of items) {
+				if (item.index === index) {
+					const renderedDetails = itemElementMap.get(item.id);
+					if (renderedDetails && renderedDetails.element) {
+						scroller.scrollTop = renderedDetails.element.offsetTop;
+						return;
+					}
+					break;
+				}
+			}
+
+			console.log('scrolledTo slice', index, this.estimatedRowCount());
+			onSliceRequest && onSliceRequest({ start: index, count: this.estimatedRowCount() });
+		}
+	}
+
+	private estimatedRowCount() {
+		const {
+			properties: {
+				estimatedRowHeight
+			},
+			scroller
+		} = this;
+
+		const height = scroller.offsetHeight;
+		if (height) {
+			return Math.round(height / this.estimatedRowHeight());
+		}
+		return estimatedRowHeight;
+	}
+
+	private estimatedRowHeight() {
+		const {
+			itemElementMap,
+			properties: {
+				estimatedRowHeight
+			}
+		} = this;
+
+		let rowHeight = 0;
+		for (let renderedDetails of from(itemElementMap.values())) {
+			if (renderedDetails.element) {
+				rowHeight += renderedDetails.element.offsetHeight;
+			}
+		}
+
+		return Math.round(rowHeight) || estimatedRowHeight;
+	}
+
 	private visibleKeys() {
 		// TODO: Use the intersection observer API
 		const {
-			itemElementMap
+			itemElementMap,
+			scroller
 		} = this;
-		const scroll = this.scroller.scrollTop;
-		const contentHeight = this.scroller.offsetHeight;
+		const scroll = scroller.scrollTop;
+		const contentHeight = scroller.offsetHeight;
 		const visible: string[] = [];
 		for (const [ key, renderedDetails ] of from(itemElementMap.entries())) {
 			const element = renderedDetails.element;
@@ -59,7 +143,7 @@ class Body extends BodyBase<BodyProperties> {
 		return visible;
 	}
 
-	protected onScroll(event: UIEvent) {
+	protected onScroll() {
 		const {
 			itemElementMap,
 			properties: {
@@ -67,26 +151,49 @@ class Body extends BodyBase<BodyProperties> {
 				totalLength,
 				offset,
 				onSliceRequest
-			}
+			},
+			scroller
 		} = this;
-
-		this.scrollTop = this.scroller.scrollTop;
 
 		const visibleKeys = this.visibleKeys();
 		if (visibleKeys.length === 0) {
-			// scrolled too fast
-			console.log('scrolled past all loaded rows');
-			const keys = from(itemElementMap.keys());
-			const renderedDetails = itemElementMap.get(keys[preload]); // the intended top-of-viewport item
-			if (renderedDetails && renderedDetails.element) {
-				this.scroller.scrollTop = renderedDetails.element.offsetTop;
+			// scrolled real fast
+			const scroll = scroller.scrollTop;
+			const allDetails = from(itemElementMap.values());
+			for (const renderedDetails of allDetails) {
+				if (renderedDetails.element && renderedDetails.element.offsetTop) {
+					const delta = (renderedDetails.element.offsetTop - scroll);
+					if (delta > 0) {
+						// content is below the viewport and we need to move back through the data set
+						itemElementMap.clear();
+						const estimatedRowHeight = this.estimatedRowHeight();
+						const start = (offset - Math.round(delta / estimatedRowHeight));
+						const count = this.estimatedRowCount();
+						onSliceRequest && onSliceRequest({ start, count });
+						return;
+					}
+					break;
+				}
 			}
-
-			// TODO: Estimate what row they scrolled to
-			// and reload from scratch
+			for (const renderedDetails of allDetails.reverse()) {
+				if (renderedDetails.element && renderedDetails.element.offsetTop && renderedDetails.element.offsetHeight) {
+					const delta = (scroll - (renderedDetails.element.offsetTop + renderedDetails.element.offsetHeight));
+					if (delta > 0) {
+						// content is above the viewport and we need to move down through the data set
+						itemElementMap.clear();
+						const estimatedRowHeight = this.estimatedRowHeight();
+						const start = (offset + items.length + Math.round(delta / estimatedRowHeight));
+						const count = this.estimatedRowCount();
+						onSliceRequest && onSliceRequest({ start, count });
+						return;
+					}
+					break;
+				}
+			}
 		}
 		else {
-			// Remember the first visible key
+			// Remember the scroll position and first visible key
+			this.scrollTop = scroller.scrollTop;
 			this.firstVisibleKey = visibleKeys[ 0 ];
 			const renderedDetails = itemElementMap.get(this.firstVisibleKey);
 			if (renderedDetails) {
@@ -100,9 +207,9 @@ class Body extends BodyBase<BodyProperties> {
 
 				// check to see if the data we need to load is
 				// different enough from what we already have
-				if (start === 0 || Math.abs(start - offset) > drift || Math.abs(count - items.length) > drift || (start + count) === items.length) {
+				if ((start !== offset || count !== items.length) && (start === 0 || Math.abs(start - offset) > drift || Math.abs(count - items.length) > drift || (start + count) === totalLength)) {
 					// TODO: Throttle?
-					console.log('slice', start, count);
+					console.log('onScroll slice', start, count);
 					onSliceRequest && onSliceRequest({ start, count });
 				}
 			}
@@ -116,8 +223,28 @@ class Body extends BodyBase<BodyProperties> {
 			}
 			return;
 		}
-
 		if (key === 'marginBottom') {
+			return;
+		}
+		if (key === 'scroller') {
+			const {
+				properties: {
+					items,
+					offset,
+					onSliceRequest
+				}
+			} = this;
+
+			this.scroller = element;
+
+			if (items.length === 0) {
+				console.log('empty items slice', offset, this.estimatedRowCount());
+				onSliceRequest && onSliceRequest({ start: offset, count: this.estimatedRowCount() });
+			}
+			else {
+				this.onScroll();
+			}
+
 			return;
 		}
 
@@ -127,16 +254,7 @@ class Body extends BodyBase<BodyProperties> {
 		}
 	}
 
-	protected onElementCreated(element: HTMLElement, key: 'scroller'): void {
-		if (key === 'scroller') {
-			this.scroller = element;
-
-			for (const [ itemKey, renderedDetails ] of from(this.itemElementMap.entries())) {
-				renderedDetails.add = false;
-			}
-
-			return;
-		}
+	protected onElementCreated(element: HTMLElement, key: string): void {
 		this.onElementChange(element, key);
 	}
 
@@ -182,28 +300,32 @@ class Body extends BodyBase<BodyProperties> {
 				}
 			}
 
-			scroller.scrollTop = scrollTop;
+			if (scroller.scrollTop !== scrollTop) {
+				scroller.scrollTop = scrollTop;
+				return;
+			}
 
-			return;
+			// fall through
 		}
+
 		this.onElementChange(element, key);
 	}
 
-	createNodeFromItem(item: ItemProperties<any>, index: number) {
+	createNodeFromItem(item: ItemProperties<any>, index: number, add: boolean = true) {
 		const {
 			itemElementMap,
 			properties: {
 				columns,
-				registry,
 				theme
-			}
+			},
+			registry = dRegistry
 		} = this;
 
 		const key = item.id;
 		let renderedDetails = itemElementMap.get(key);
 		if (!renderedDetails) {
 			renderedDetails = {
-				add: true,
+				add: add,
 				delete: false,
 				index: index
 			};
@@ -228,7 +350,7 @@ class Body extends BodyBase<BodyProperties> {
 		]);
 	}
 
-	render() {
+	render(): DNode {
 		const {
 			itemElementMap,
 			properties: {
@@ -244,7 +366,7 @@ class Body extends BodyBase<BodyProperties> {
 		if (previousKeys.length === 0) {
 			// TODO: Split when properties contain an offset
 			for (let i = 0, item; (item = items[i]); i++) {
-				children.push(this.createNodeFromItem(item, i));
+				children.push(this.createNodeFromItem(item, (offset + i), false));
 			}
 		}
 		else {
@@ -258,6 +380,12 @@ class Body extends BodyBase<BodyProperties> {
 			});
 
 			const keyPatches = diff(currentKeys, previousKeys);
+			const keyPatch = keyPatches[0];
+			if (keyPatch && keyPatch.removed && keyPatch.removed.length === previousKeys.length) {
+				itemElementMap.clear();
+				return this.render();
+			}
+
 			for (let i = 0, il = previousKeys.length; i <= il; i++) {
 				const key = previousKeys[i];
 
@@ -265,12 +393,12 @@ class Body extends BodyBase<BodyProperties> {
 				if (keyPatch) {
 					if (keyPatch.added) {
 						for (const added of keyPatch.added) {
-							const key = currentKeys[added.to];
-							children.push(itemsByKey[key]);
+							const addedKey = currentKeys[added.to];
+							children.push(itemsByKey[addedKey]);
 
-							const updatedMeasured = itemElementMap.get(key);
+							const updatedMeasured = itemElementMap.get(addedKey);
 							if (updatedMeasured) {
-								updatedItemElementMap.set(key, updatedMeasured);
+								updatedItemElementMap.set(addedKey, updatedMeasured);
 							}
 						}
 					}

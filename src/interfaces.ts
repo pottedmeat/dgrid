@@ -1,5 +1,6 @@
 import { WidgetProperties, WidgetBaseConstructor } from '@dojo/widget-core/interfaces';
 import { RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
+import { ScrolledTo } from './Grid';
 
 export interface SliceDetails {
 	start: number;
@@ -13,6 +14,7 @@ export interface SortDetails {
 
 export interface ItemProperties<T> {
 	id: string;
+	index: number;
 	data: T;
 }
 
@@ -42,6 +44,14 @@ export interface HasColumns {
 
 export interface HasColumn {
 	column: Column<any>;
+}
+
+export interface HasEstimatedRowHeight {
+	estimatedRowHeight: number; // default 20
+}
+
+export interface HasScrolledTo {
+	scrolledTo?: ScrolledTo;
 }
 
 export interface HasSortDetails {

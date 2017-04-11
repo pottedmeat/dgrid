@@ -1,21 +1,27 @@
 import { includes } from '@dojo/shim/array';
 import { Subscription } from '@dojo/shim/Observable';
 import { v, w } from '@dojo/widget-core/d';
+import { DiffType } from '@dojo/widget-core/diff';
 import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
 import { PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
-import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
+import WidgetBase, { diffProperty, onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import DataProviderBase, { Options } from './bases/DataProviderBase';
-import Body, { BodyProperties } from './Body';
+import Body, { BodyProperties, diffPropertyScrolledTo } from './Body';
 import Cell from './Cell';
 import Header, { HeaderProperties } from './Header';
 import HeaderCell from './HeaderCell';
-import { DataProperties, HasColumns } from './interfaces';
+import { DataProperties, HasColumns, HasEstimatedRowHeight, HasScrolledTo } from './interfaces';
 import Row from './Row';
 
-import * as gridClasses from './styles/grid.css';
+import * as gridClasses from './styles/grid.m.css';
 
 export const GridBase = ThemeableMixin(WidgetBase);
+
+export interface ScrolledTo {
+	index: number;
+	position?: 'none' | 'top' | 'middle' | 'bottom'; // default none
+}
 
 /**
  * @type GridProperties
@@ -25,7 +31,7 @@ export const GridBase = ThemeableMixin(WidgetBase);
  * @property dataProvider	An observable object that responds to events and returns DataProperties
  * @property columns		Column definitions
  */
-export interface GridProperties extends ThemeableProperties, HasColumns {
+export interface GridProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasScrolledTo {
 	registry?: WidgetRegistry;
 	dataProvider: DataProviderBase<any, Options>;
 }
@@ -41,6 +47,7 @@ function createRegistry(partialRegistry?: WidgetRegistry) {
 }
 
 @theme(gridClasses)
+@diffProperty('scrolledTo', DiffType.CUSTOM, diffPropertyScrolledTo)
 class Grid extends GridBase<GridProperties> {
 	private data: DataProperties<any>;
 	private subscription: Subscription;
@@ -52,9 +59,14 @@ class Grid extends GridBase<GridProperties> {
 		this.registry = createRegistry();
 	}
 
-	@onPropertiesChanged
+	public setProperties(properties: GridProperties): void {
+		properties.registry = createRegistry(properties.registry);
+		super.setProperties(properties);
+	}
+
+	@onPropertiesChanged()
 	protected onPropertiesChanged(evt: PropertiesChangeEvent<this, GridProperties>) {
-		let {
+		const {
 			dataProvider,
 			registry
 		} = evt.properties;
@@ -70,25 +82,27 @@ class Grid extends GridBase<GridProperties> {
 			});
 		}
 
-		if (includes(evt.changedPropertyKeys, 'registry')) {
+		if (registry && !this.registry && includes(evt.changedPropertyKeys, 'registry')) {
 			this.registry = createRegistry(registry);
 		}
 	}
 
 	render() {
 		const {
-			registry,
 			data: {
 				items = [],
 				sort = [],
-				offset = -1,
-				totalLength = -1
+				offset = 0,
+				totalLength = 0
 			} = {},
 			properties: {
 				theme,
 				columns,
-				dataProvider
-			}
+				dataProvider,
+				scrolledTo,
+				estimatedRowHeight = 20
+			},
+			registry
 		} = this;
 		const {
 			slice: onSliceRequest,
@@ -110,10 +124,12 @@ class Grid extends GridBase<GridProperties> {
 				registry,
 				theme,
 				columns,
+				estimatedRowHeight,
 				items,
 				offset,
 				totalLength,
-				onSliceRequest: onSliceRequest && onSliceRequest.bind(dataProvider)
+				onSliceRequest: onSliceRequest && onSliceRequest.bind(dataProvider),
+				scrolledTo
 			})
 		]);
 	}

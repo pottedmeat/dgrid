@@ -27,10 +27,7 @@ for (let i = 1; i <= 10000; i++) {
 
 const dataProvider = new ArrayDataProvider({
 	idProperty: 'order',
-	data: instructions,
-	configuration: {
-		slice: { start: 0, count: 100 }
-	}
+	data: instructions
 });
 
 const columns = [
@@ -48,12 +45,16 @@ const columns = [
 	}
 ];
 
-class Projector extends ProjectorMixin(WidgetBase)<WidgetProperties> {
+const properties: GridProperties = {
+	dataProvider,
+	columns
+};
+
+export const ProjectorBase = ProjectorMixin(WidgetBase);
+
+class Projector extends ProjectorBase<WidgetProperties> {
 	render() {
-		return w(Grid, <GridProperties> {
-			dataProvider,
-			columns
-		});
+		return w(Grid, properties);
 	}
 }
 
