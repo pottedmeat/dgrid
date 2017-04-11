@@ -109,13 +109,15 @@ class Body extends BodyBase<BodyProperties> {
 		} = this;
 
 		let rowHeight = 0;
+		let rowCount = 0;
 		for (let renderedDetails of from(itemElementMap.values())) {
 			if (renderedDetails.element) {
 				rowHeight += renderedDetails.element.offsetHeight;
+				rowCount++;
 			}
 		}
 
-		return Math.round(rowHeight) || estimatedRowHeight;
+		return Math.round(rowHeight / rowCount) || estimatedRowHeight;
 	}
 
 	private visibleKeys() {
@@ -156,6 +158,7 @@ class Body extends BodyBase<BodyProperties> {
 		} = this;
 
 		const visibleKeys = this.visibleKeys();
+
 		if (visibleKeys.length === 0) {
 			// scrolled real fast
 			const scroll = scroller.scrollTop;
@@ -165,10 +168,10 @@ class Body extends BodyBase<BodyProperties> {
 					const delta = (renderedDetails.element.offsetTop - scroll);
 					if (delta > 0) {
 						// content is below the viewport and we need to move back through the data set
-						itemElementMap.clear();
 						const estimatedRowHeight = this.estimatedRowHeight();
 						const start = (offset - Math.round(delta / estimatedRowHeight));
 						const count = this.estimatedRowCount();
+						console.log('out of bounds slice', start, count);
 						onSliceRequest && onSliceRequest({ start, count });
 						return;
 					}
@@ -180,10 +183,10 @@ class Body extends BodyBase<BodyProperties> {
 					const delta = (scroll - (renderedDetails.element.offsetTop + renderedDetails.element.offsetHeight));
 					if (delta > 0) {
 						// content is above the viewport and we need to move down through the data set
-						itemElementMap.clear();
 						const estimatedRowHeight = this.estimatedRowHeight();
 						const start = (offset + items.length + Math.round(delta / estimatedRowHeight));
 						const count = this.estimatedRowCount();
+						console.log('out of bounds slice', start, count);
 						onSliceRequest && onSliceRequest({ start, count });
 						return;
 					}
