@@ -11,14 +11,14 @@ import Body, { BodyProperties, diffPropertyScrolledTo } from './Body';
 import Cell from './Cell';
 import Header, { HeaderProperties } from './Header';
 import HeaderCell from './HeaderCell';
-import { DataProperties, HasColumns, HasEstimatedRowHeight, HasScrolledTo } from './interfaces';
+import { DataProperties, HasColumns, HasEstimatedRowHeight, HasScrollTo } from './interfaces';
 import Row from './Row';
 
 import * as gridClasses from './styles/grid.m.css';
 
 export const GridBase = ThemeableMixin(WidgetBase);
 
-export interface ScrolledTo {
+export interface ScrollTo {
 	index: number;
 	position?: 'none' | 'top' | 'middle' | 'bottom'; // default none
 }
@@ -31,7 +31,7 @@ export interface ScrolledTo {
  * @property dataProvider	An observable object that responds to events and returns DataProperties
  * @property columns		Column definitions
  */
-export interface GridProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasScrolledTo {
+export interface GridProperties extends ThemeableProperties, HasColumns, Partial<HasEstimatedRowHeight>, Partial<HasScrollTo> {
 	registry?: WidgetRegistry;
 	dataProvider: DataProviderBase<any, Options>;
 }
@@ -47,10 +47,11 @@ function createRegistry(partialRegistry?: WidgetRegistry) {
 }
 
 @theme(gridClasses)
-@diffProperty('scrolledTo', DiffType.CUSTOM, diffPropertyScrolledTo)
+@diffProperty('scrollTo', DiffType.CUSTOM, diffPropertyScrolledTo)
 class Grid extends GridBase<GridProperties> {
 	private data: DataProperties<any>;
 	private subscription: Subscription;
+	private scrollTo?: ScrollTo;
 	protected registry: WidgetRegistry;
 
 	constructor() {
@@ -62,6 +63,17 @@ class Grid extends GridBase<GridProperties> {
 	public setProperties(properties: GridProperties): void {
 		properties.registry = createRegistry(properties.registry);
 		super.setProperties(properties);
+	}
+
+	private onScrollToRequest(scrollTo: ScrollTo) {
+		this.scrollTo = scrollTo;
+		this.invalidate();
+	}
+
+	private onScrollToComplete() {
+		delete this.scrollTo;
+		const onScrollToComplete = this.properties.onScrollToComplete;
+		onScrollToComplete && onScrollToComplete();
 	}
 
 	@onPropertiesChanged()
@@ -99,7 +111,7 @@ class Grid extends GridBase<GridProperties> {
 				theme,
 				columns,
 				dataProvider,
-				scrolledTo,
+				scrollTo = this.scrollTo,
 				estimatedRowHeight = 20
 			},
 			registry
@@ -129,7 +141,9 @@ class Grid extends GridBase<GridProperties> {
 				offset,
 				totalLength,
 				onSliceRequest: onSliceRequest && onSliceRequest.bind(dataProvider),
-				scrolledTo
+				scrollTo,
+				onScrollToComplete: this.onScrollToComplete,
+				onScrollToRequest: this.onScrollToRequest
 			})
 		]);
 	}

@@ -1,6 +1,6 @@
 import { WidgetProperties, WidgetBaseConstructor } from '@dojo/widget-core/interfaces';
 import { RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
-import { ScrolledTo } from './Grid';
+import { ScrollTo } from './Grid';
 
 export interface SliceDetails {
 	start: number;
@@ -50,8 +50,9 @@ export interface HasEstimatedRowHeight {
 	estimatedRowHeight: number; // default 20
 }
 
-export interface HasScrolledTo {
-	scrolledTo?: ScrolledTo;
+export interface HasScrollTo {
+	scrollTo?: ScrollTo;
+	onScrollToComplete(): void;
 }
 
 export interface HasSortDetails {

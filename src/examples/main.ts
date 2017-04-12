@@ -5,6 +5,7 @@ import { WidgetBase } from '@dojo/widget-core/WidgetBase';
 import { WidgetProperties } from '@dojo/widget-core/interfaces';
 import { w } from '@dojo/widget-core/d';
 import { GridProperties } from '../Grid';
+import { HasScrollTo } from '../interfaces';
 
 const data = [
 	{ order: 1, name: 'preheat', description: 'Preheat your oven to 350F' },
@@ -45,9 +46,12 @@ const columns = [
 	}
 ];
 
-const properties: GridProperties = {
+const properties: GridProperties & HasScrollTo = {
 	dataProvider,
-	columns
+	columns,
+	onScrollToComplete() {
+		delete properties.scrollTo;
+	}
 };
 
 export const ProjectorBase = ProjectorMixin(WidgetBase);
@@ -61,3 +65,10 @@ class Projector extends ProjectorBase<WidgetProperties> {
 const projector = new Projector();
 
 projector.append();
+
+setTimeout(function(){
+	properties.scrollTo = {
+		index: 4321
+	};
+	projector.invalidate();
+}, 500);
