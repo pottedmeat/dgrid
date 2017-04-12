@@ -40,5 +40,8 @@
     "intern": "^3.4.1",
     "sinon": "^1.17.6",
     "typescript": "~2.2.1"
+  },
+  "dependencies": {
+    "intersection-observer": "^0.2.1"
   }
 }

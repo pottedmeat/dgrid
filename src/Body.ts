@@ -1,10 +1,12 @@
 import { from, includes } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
+import Set from '@dojo/shim/Set';
 import { registry as dRegistry, v, w } from '@dojo/widget-core/d';
 import diffProperties, { DiffType } from '@dojo/widget-core/diff';
 import { DNode, PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import WidgetBase, { diffProperty, onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
+import 'intersection-observer';
 import { diff } from './compare';
 import {
 	HasColumns, HasItems, HasSliceEvent, HasOffset, HasTotalLength, ItemProperties,
@@ -52,6 +54,9 @@ class Body extends BodyBase<BodyProperties> {
 	private scrollTop = 0;
 	private marginTop: RenderedDetails;
 	private firstVisibleKey: string;
+	private observer: IntersectionObserver;
+	private visibleKeys: string[] = [];
+	private visibleElementSet = new Set<Element>();
 
 	@onPropertiesChanged()
 	onPropertiesChanged(evt: PropertiesChangeEvent<this, BodyProperties>) {
@@ -122,32 +127,16 @@ class Body extends BodyBase<BodyProperties> {
 		return Math.round(rowHeight / rowCount) || estimatedRowHeight;
 	}
 
-	private visibleKeys() {
-		// TODO: Use the intersection observer API
-		const {
-			itemElementMap,
-			scroller
-		} = this;
-		const scroll = scroller.scrollTop;
-		const contentHeight = scroller.offsetHeight;
-		const visible: string[] = [];
-		for (const [ key, renderedDetails ] of from(itemElementMap.entries())) {
-			const element = renderedDetails.element;
-			if (element) {
-				const top = element.offsetTop;
-				const height = element.offsetHeight;
-				if ((top + height) >= scroll && top < (scroll + contentHeight)) {
-					visible.push(key);
-				}
-				else if (visible.length) {
-					break;
-				}
-			}
+	private updateIntersectionObserver() {
+		const _checkForIntersections: Function = (<any> IntersectionObserver.prototype)._checkForIntersections;
+		if (_checkForIntersections) {
+			_checkForIntersections.call(this.observer);
 		}
-		return visible;
 	}
 
 	protected onScroll() {
+		this.updateIntersectionObserver();
+
 		const {
 			itemElementMap,
 			properties: {
@@ -157,10 +146,9 @@ class Body extends BodyBase<BodyProperties> {
 				onScrollToRequest,
 				onSliceRequest
 			},
-			scroller
+			scroller,
+			visibleKeys
 		} = this;
-
-		const visibleKeys = this.visibleKeys();
 
 		if (visibleKeys.length === 0) {
 			// scrolled real fast
@@ -198,7 +186,7 @@ class Body extends BodyBase<BodyProperties> {
 		else {
 			// Remember the scroll position and first visible key
 			this.scrollTop = scroller.scrollTop;
-			this.firstVisibleKey = visibleKeys[ 0 ];
+			this.firstVisibleKey = visibleKeys[0];
 			const renderedDetails = itemElementMap.get(this.firstVisibleKey);
 			if (renderedDetails) {
 				// Request new content
@@ -258,7 +246,37 @@ class Body extends BodyBase<BodyProperties> {
 		}
 	}
 
+	onIntersection(entries: IntersectionObserverEntry[]) {
+		const visibleElementSet = this.visibleElementSet;
+		for (const entry of entries) {
+			if (entry.intersectionRatio > 0) {
+				visibleElementSet.add(entry.target);
+			}
+			else {
+				visibleElementSet.delete(entry.target);
+			}
+		}
+
+		const itemElementMap = this.itemElementMap;
+		const visibleKeys: string[] = [];
+		for (const [ itemKey, renderedDetails ] of from(itemElementMap.entries())) {
+			if (renderedDetails.element && visibleElementSet.has(renderedDetails.element)) {
+				visibleKeys.push(itemKey);
+			}
+		}
+		this.visibleKeys = visibleKeys;
+	}
+
 	protected onElementCreated(element: HTMLElement, key: string): void {
+		if (key === 'scroller') {
+			this.observer = new IntersectionObserver(this.onIntersection.bind(this), {
+				root: element
+			});
+		}
+		else if (key !== 'marginTop' && key !== 'marginBottom') {
+			this.observer.observe(element);
+		}
+
 		this.onElementChange(element, key);
 	}
 
