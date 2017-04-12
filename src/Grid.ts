@@ -1,13 +1,12 @@
 import { includes } from '@dojo/shim/array';
 import { Subscription } from '@dojo/shim/Observable';
 import { v, w } from '@dojo/widget-core/d';
-import { DiffType } from '@dojo/widget-core/diff';
 import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
 import { PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase, { diffProperty, onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import DataProviderBase, { Options } from './bases/DataProviderBase';
-import Body, { BodyProperties, diffPropertyScrolledTo } from './Body';
+import Body, { BodyProperties } from './Body';
 import Cell from './Cell';
 import Header, { HeaderProperties } from './Header';
 import HeaderCell from './HeaderCell';
@@ -47,7 +46,6 @@ function createRegistry(partialRegistry?: WidgetRegistry) {
 }
 
 @theme(gridClasses)
-@diffProperty('scrollTo', DiffType.CUSTOM, diffPropertyScrolledTo)
 class Grid extends GridBase<GridProperties> {
 	private data: DataProperties<any>;
 	private subscription: Subscription;
