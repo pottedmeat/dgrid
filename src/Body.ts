@@ -172,7 +172,7 @@ class Body extends BodyBase<BodyProperties> {
 					if (delta > 0) {
 						// content is below the viewport and we need to move back through the data set
 						const estimatedRowHeight = this.estimatedRowHeight();
-						const start = Math.min(totalLength - 1, (offset - Math.round(delta / estimatedRowHeight)));
+						const start = Math.max(0, Math.min(totalLength - 1, (offset - Math.round(delta / estimatedRowHeight))));
 						console.log('out of bounds scrollTo', start);
 						onScrollToRequest({ index: start });
 						return;
@@ -186,7 +186,7 @@ class Body extends BodyBase<BodyProperties> {
 					if (delta > 0) {
 						// content is above the viewport and we need to move down through the data set
 						const estimatedRowHeight = this.estimatedRowHeight();
-						const start = Math.min(totalLength - 1, (offset + items.length + Math.round(delta / estimatedRowHeight)));
+						const start = Math.max(0, Math.min(totalLength - 1, (offset + items.length + Math.round(delta / estimatedRowHeight))));
 						console.log('out of bounds scrollTo', start);
 						onScrollToRequest({ index: start });
 						return;
