@@ -1,17 +1,13 @@
-import { from, includes } from '@dojo/shim/array';
+import { from } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
 import Set from '@dojo/shim/Set';
 import { registry as dRegistry, v, w } from '@dojo/widget-core/d';
-import { DNode, PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
+import { DNode } from '@dojo/widget-core/interfaces';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
-import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
+import WidgetBase from '@dojo/widget-core/WidgetBase';
 import 'intersection-observer';
 import { diff } from './compare';
-import {
-	HasColumns, HasItems, HasSliceEvent, HasOffset, HasTotalLength, ItemProperties,
-	HasScrollTo, HasEstimatedRowHeight
-} from './interfaces';
-import { ScrollTo } from './Grid';
+import { HasColumns, HasItems, HasSliceEvent, HasOffset, HasTotalLength, ItemProperties, HasScrollTo, HasEstimatedRowHeight } from './interfaces';
 import { RowProperties } from './Row';
 import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 
@@ -27,109 +23,21 @@ interface RenderedDetails {
 
 export const BodyBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
-export interface BodyProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasItems, HasOffset, HasTotalLength, HasScrollTo, HasSliceEvent, RegistryMixinProperties {
-	onScrollToRequest(scrollTo: ScrollTo): void;
-}
+export interface BodyProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasItems, HasOffset, HasTotalLength, HasScrollTo, HasSliceEvent, RegistryMixinProperties {}
 
-const margin = 10000;
-const preload = 10;
-const drift = 2;
+const preload = 100;
+const drift = 10;
 
 @theme(bodyClasses)
 class Body extends BodyBase<BodyProperties> {
 	private itemElementMap = new Map<string, RenderedDetails>();
 	private scroller: HTMLElement;
 	private scrollTop = 0;
-	private marginTop: RenderedDetails;
 	private firstVisibleKey: string;
 	private observer: IntersectionObserver;
 	private visibleKeys: string[] = [];
 	private visibleElementSet = new Set<Element>();
 	private expectScroll: number;
-
-	@onPropertiesChanged()
-	onPropertiesChanged(evt: PropertiesChangeEvent<this, BodyProperties>) {
-		const {
-			scrollTo
-		} = evt.properties;
-		const {
-			itemElementMap,
-			properties: {
-				items,
-				onScrollToComplete,
-				onSliceRequest
-			},
-			scroller
-		} = this;
-
-		if (includes(evt.changedPropertyKeys, 'scrollTo') && scrollTo) {
-			// the scrollTo property was passed either by the user
-			// or by the grid after a call to onScrollToRequest
-			const index = scrollTo.index;
-			for (const item of items) {
-				// we saved the "true" index on all details
-				// objects so we can just directly compare
-				if (item.index === index) {
-					const renderedDetails = itemElementMap.get(item.id);
-					if (renderedDetails && renderedDetails.element) {
-						// if this exists within the grid, just scroll to it
-						// and allow the event handler to fill in any missing data
-						scroller.scrollTop = renderedDetails.element.offsetTop;
-						// notify the property listener that this is done
-						// to allow it to clear this property
-						onScrollToComplete();
-						return;
-					}
-					break;
-				}
-			}
-
-			// this index is not currently rendered so we request a slice
-			// of the data with a number of rows to hopefully fill in the scroll area
-			onSliceRequest && onSliceRequest({ start: index, count: this.estimatedRowCount() });
-		}
-	}
-
-	/**
-	 * Uses the height of the scroll area and the estimated row height
-	 * to estimate the number of rows that will fill it
-	 *
-	 * @returns {number}
-	 */
-	private estimatedRowCount(): number {
-		const height = this.scroller.offsetHeight;
-		if (height) {
-			return Math.round(height / this.estimatedRowHeight());
-		}
-		return 100;
-	}
-
-	/**
-	 * Based on what is currently rendered, find the average height
-	 * of each row and, if nothing is rendered, use
-	 * properties.estimatedRowHiehgt which has a default of 20
-	 *
-	 * @returns {number}
-	 */
-	private estimatedRowHeight(): number {
-		const {
-			itemElementMap,
-			properties: {
-				estimatedRowHeight
-			}
-		} = this;
-
-		let rowHeight = 0;
-		let rowCount = 0;
-		for (let renderedDetails of from(itemElementMap.values())) {
-			if (renderedDetails.element) {
-				rowHeight += renderedDetails.element.offsetHeight;
-				rowCount++;
-			}
-		}
-
-		return Math.round(rowHeight / rowCount) || estimatedRowHeight;
-	}
 
 	/**
 	 * A utility function to force the IntersectionObserver polyfill
@@ -146,120 +54,46 @@ class Body extends BodyBase<BodyProperties> {
 		// Chrome may call onScroll before notifying us of new intersections
 		// so the intersection handler sets a callback that we can clear.
 		clearTimeout(this.expectScroll);
+		// The polyfill is debounced, but we need to know the intersection right now
 		this.updateIntersectionObserver();
 
-		const {
-			itemElementMap,
-			properties: {
-				items,
-				totalLength,
-				offset,
-				onScrollToRequest,
-				onSliceRequest
-			},
-			scroller,
-			visibleKeys
-		} = this;
-
-		if (visibleKeys.length === 0) {
-			// This happens during a very rapid scroll
-			// the grid hasn't received data from the data provider
-			// that has filled in the current view port
-			const scroll = scroller.scrollTop;
-			const allDetails = from(itemElementMap.values());
-			for (const renderedDetails of allDetails) {
-				if (renderedDetails.element && renderedDetails.element.offsetTop) {
-					const delta = (renderedDetails.element.offsetTop - scroll);
-					if (delta > 0) {
-						// The top of the rendered data is below the current viewport
-						// so we try to guess how many rows were skipped and jump
-						// down to that area
-						const estimatedRowHeight = this.estimatedRowHeight();
-						const start = Math.max(0, Math.min(totalLength - 1, (offset - Math.round(delta / estimatedRowHeight))));
-						console.log('out of bounds scrollTo', start);
-						onScrollToRequest({ index: start });
-						return;
-					}
-					break;
-				}
+		this.scrollTop = this.scroller.scrollTop;
+		this.firstVisibleKey = this.visibleKeys[0];
+		const renderedDetails = this.itemElementMap.get(this.firstVisibleKey);
+		if (renderedDetails) {
+			// Use the index of the first row as a starting point
+			// as well as moving back a few rows so there's
+			// additional data above the scroll area
+			const start = Math.max(0, renderedDetails.index - preload);
+			let count = (Math.min(renderedDetails.index, preload) + this.visibleKeys.length + preload);
+			// Use the start value we found and request an amount of data
+			// equal to the additional data above the scroll area, the number
+			// of visible rows and the additional data below the scroll area
+			if (start + count > this.properties.totalLength) {
+				// If we've reached the data limit
+				// only ask for as many rows as are left
+				count = (this.properties.totalLength - start);
 			}
-			for (const renderedDetails of allDetails.reverse()) {
-				if (renderedDetails.element && renderedDetails.element.offsetTop && renderedDetails.element.offsetHeight) {
-					const delta = (scroll - (renderedDetails.element.offsetTop + renderedDetails.element.offsetHeight));
-					if (delta > 0) {
-						// The bottom of the rendered data is below the current viewport
-						// so we try to guess how many rows were skipped and jump
-						// down to that area
-						const estimatedRowHeight = this.estimatedRowHeight();
-						const start = Math.max(0, Math.min(totalLength - 1, (offset + items.length + Math.round(delta / estimatedRowHeight))));
-						console.log('out of bounds scrollTo', start);
-						onScrollToRequest({ index: start });
-						return;
-					}
-					break;
-				}
-			}
-		}
-		else {
-			// This is the typical path the code will take
-			this.scrollTop = scroller.scrollTop;
-			this.firstVisibleKey = visibleKeys[0];
-			const renderedDetails = itemElementMap.get(this.firstVisibleKey);
-			if (renderedDetails) {
-				// Use the index of the first row as a starting point
-				// as well as moving back a few rows so there's
-				// additional data above the scroll area
-				const start = Math.max(0, renderedDetails.index - preload);
-				let count = (Math.min(renderedDetails.index, preload) + visibleKeys.length + preload);
-				// Use the start value we found and request an amount of data
-				// equal to the additional data above the scroll area, the number
-				// of visible rows and the additional data below the scroll area
-				if (start + count > totalLength) {
-					// If we've reached the data limit
-					// only ask for as many rows as are left
-					count = (totalLength - start);
-				}
 
-				// Limit data requests so that we only ever ask for
-				// a. start/count combinations that differ from what we already have (see c.)
-				// b. a start or end index that exceeds a limit we're comfortable with
-				// c. the very start or very end of the data even if that limit is not reached
-				if ((start !== offset || count !== items.length) && (start === 0 || Math.abs(start - offset) > drift || Math.abs(count - items.length) > drift || (start + count) === totalLength)) {
-					// TODO: Throttle?
-					console.log('onScroll slice', start, count);
-					onSliceRequest && onSliceRequest({ start, count });
-				}
+			// Limit data requests so that we only ever ask for
+			// a. start/count combinations that differ from what we already have (see c.)
+			// b. a start or end index that exceeds a limit we're comfortable with
+			// c. the very start or very end of the data even if that limit is not reached
+			if ((start !== this.properties.offset || count !== this.properties.items.length) && (start === 0 || Math.abs(start - this.properties.offset) > drift || Math.abs(count - this.properties.items.length) > drift || (start + count) === this.properties.totalLength)) {
+				this.properties.onSliceRequest && this.properties.onSliceRequest({ start, count });
 			}
 		}
 	}
 
 	protected onElementChange(element: HTMLElement, key: string): void {
-		if (key === 'marginTop') {
-			if (this.marginTop) {
-				this.marginTop.element = element;
-			}
-			return;
-		}
-		if (key === 'marginBottom') {
-			return;
-		}
 		if (key === 'scroller') {
-			const {
-				properties: {
-					items,
-					offset,
-					onSliceRequest
-				}
-			} = this;
-
 			this.scroller = element;
 
-			if (items.length === 0) {
+			if (this.properties.items.length === 0) {
 				// If there has been no data passed (e.g. during initialization)
 				// wait until the scroll area appears to get a more accurate
 				// estimate of how many rows to ask for initially
-				console.log('empty items slice', offset, this.estimatedRowCount());
-				onSliceRequest && onSliceRequest({ start: offset, count: this.estimatedRowCount() });
+				this.properties.onSliceRequest && this.properties.onSliceRequest({ start: this.properties.offset, count: 25 });
 			}
 			else {
 				// We hit this when the children of the scroll area change
@@ -319,7 +153,7 @@ class Body extends BodyBase<BodyProperties> {
 				root: element
 			});
 		}
-		else if (key !== 'marginTop' && key !== 'marginBottom') {
+		else {
 			// Observe each item row, as it's created
 			this.observer.observe(element);
 		}
@@ -329,22 +163,8 @@ class Body extends BodyBase<BodyProperties> {
 
 	protected onElementUpdated(element: HTMLElement, key: 'scroller'): void {
 		if (key === 'scroller') {
-			const {
-				firstVisibleKey,
-				itemElementMap,
-				marginTop,
-				properties: {
-					onScrollToComplete,
-					offset,
-					scrollTo
-				},
-				scroller
-			} = this;
-
-			const itemElementMapEntries = from(itemElementMap.entries());
-
 			let cleared = true;
-			for (const [ itemKey, renderedDetails] of itemElementMapEntries) {
+			for (const renderedDetails of from(this.itemElementMap.values())) {
 				if (!renderedDetails.add) {
 					cleared = false;
 					break;
@@ -357,27 +177,17 @@ class Body extends BodyBase<BodyProperties> {
 				// If all item rows are new,
 				// reset the scroll bar
 				scrollTop = 0;
-				if (marginTop && marginTop.element) {
-					scrollTop = marginTop.element.offsetHeight;
-				}
-
-				if (scrollTo) {
-					onScrollToComplete();
-				}
 
 				// mark nodes as having been factored into scroll calculations
-				for (const [ itemKey, renderedDetails] of itemElementMapEntries) {
+				for (const renderedDetails of from(this.itemElementMap.values())) {
 					renderedDetails.add = false;
-				}
-				if (marginTop) {
-					marginTop.add = false;
 				}
 			}
 			else {
 				// keep track of everything before the first visible key
 				let beforeVisible = true;
-				for (const [ itemKey, renderedDetails ] of itemElementMapEntries) {
-					if (itemKey === firstVisibleKey) {
+				for (const [ itemKey, renderedDetails ] of from(this.itemElementMap.entries())) {
+					if (itemKey === this.firstVisibleKey) {
 						beforeVisible = false;
 					}
 
@@ -395,26 +205,14 @@ class Body extends BodyBase<BodyProperties> {
 					// mark nodes as having been factored into scroll calculations
 					renderedDetails.add = false;
 					if (renderedDetails.delete) {
-						itemElementMap.delete(itemKey);
-					}
-				}
-
-				// factor in the addition or removal of the top margin
-				if (marginTop) {
-					if (marginTop.add && marginTop.element) {
-						scrollTop += marginTop.element.offsetHeight;
-						marginTop.add = false;
-					}
-					if (marginTop.delete) {
-						scrollTop -= (marginTop.height || 0);
-						delete this.marginTop;
+						this.itemElementMap.delete(itemKey);
 					}
 				}
 			}
 
-			if (scroller.scrollTop !== scrollTop) {
+			if (this.scroller.scrollTop !== scrollTop) {
 				// The scroll event handler will adjust the slice
-				scroller.scrollTop = scrollTop;
+				this.scroller.scrollTop = scrollTop;
 				return;
 			}
 
@@ -425,24 +223,15 @@ class Body extends BodyBase<BodyProperties> {
 	}
 
 	createNodeFromItem(item: ItemProperties<any>, index: number) {
-		const {
-			itemElementMap,
-			properties: {
-				columns,
-				theme
-			},
-			registry = dRegistry
-		} = this;
-
 		const key = item.id;
-		let renderedDetails = itemElementMap.get(key);
+		let renderedDetails = this.itemElementMap.get(key);
 		if (!renderedDetails) {
 			renderedDetails = {
 				add: true,
 				delete: false,
 				index: index
 			};
-			itemElementMap.set(key, renderedDetails);
+			this.itemElementMap.set(key, renderedDetails);
 		}
 		else {
 			renderedDetails.index = index;
@@ -456,55 +245,22 @@ class Body extends BodyBase<BodyProperties> {
 			w<RowProperties>('row', {
 				key,
 				item,
-				columns,
-				registry,
-				theme
+				columns: this.properties.columns,
+				registry: this.registry || dRegistry,
+				theme: this.properties.theme
 			})
 		]);
 	}
 
 	render(): DNode {
-		const {
-			itemElementMap,
-			properties: {
-				items,
-				offset,
-				totalLength
-			}
-		} = this;
-
 		const children: DNode[] = [];
 
-		// Create a top margin if the data has any offset at all
-		let marginTop = this.marginTop;
-		if (offset > 0) {
-			if (!marginTop) {
-				marginTop = this.marginTop = {
-					add: true,
-					delete: false,
-					index: -1
-				};
-			}
-			children.push(v('div', {
-				key: 'marginTop',
-				styles: {
-					height: (margin + 'px')
-				}
-			}));
-		}
-		else if (marginTop) {
-			if (marginTop.element) {
-				marginTop.height = marginTop.element.offsetHeight;
-			}
-			marginTop.delete = true;
-		}
-
-		const previousKeys = from(itemElementMap.keys());
+		const previousKeys = from(this.itemElementMap.keys());
 		if (previousKeys.length === 0) {
 			// There were no item rows the last time render was called
 			// so every row is added
-			for (let i = 0, item; (item = items[i]); i++) {
-				children.push(this.createNodeFromItem(item, (offset + i)));
+			for (let i = 0, item; (item = this.properties.items[i]); i++) {
+				children.push(this.createNodeFromItem(item, (this.properties.offset + i)));
 			}
 		}
 		else {
@@ -513,11 +269,11 @@ class Body extends BodyBase<BodyProperties> {
 
 			// Keep a map of current keys (item IDs) and items
 			const itemsByKey: { [key: string]: DNode } = {};
-			const currentKeys: string[] = items.map((item, index) => {
+			const currentKeys: string[] = this.properties.items.map((item, index) => {
 				const key = item.id;
 				// createNodeFromItem marks this item as having been added
 				// automatically if it didn't have a mapping already
-				itemsByKey[key] = this.createNodeFromItem(item, (offset + index));
+				itemsByKey[key] = this.createNodeFromItem(item, (this.properties.offset + index));
 				return key;
 			});
 
@@ -527,7 +283,7 @@ class Body extends BodyBase<BodyProperties> {
 			const keyPatch = keyPatches[0];
 			if (keyPatch && keyPatch.removed && keyPatch.removed.length === previousKeys.length) {
 				// If everything was removed, we can start from scratch
-				itemElementMap.clear();
+				this.itemElementMap.clear();
 				return this.render();
 			}
 
@@ -544,7 +300,7 @@ class Body extends BodyBase<BodyProperties> {
 							const addedKey = currentKeys[added.to];
 							children.push(itemsByKey[addedKey]);
 
-							const updatedMeasured = itemElementMap.get(addedKey);
+							const updatedMeasured = this.itemElementMap.get(addedKey);
 							if (updatedMeasured) {
 								updatedItemElementMap.set(addedKey, updatedMeasured);
 							}
@@ -554,13 +310,13 @@ class Body extends BodyBase<BodyProperties> {
 
 				if (i < il) {
 					const item = itemsByKey[key];
-					const renderedDetails = itemElementMap.get(key);
+					const renderedDetails = this.itemElementMap.get(key);
 					if (item) {
 						// This item is consistent between the previous
 						// render call and this one
 						children.push(item);
 
-						const updatedMeasured = itemElementMap.get(key);
+						const updatedMeasured = this.itemElementMap.get(key);
 						if (updatedMeasured) {
 							updatedItemElementMap.set(key, updatedMeasured);
 						}
@@ -578,7 +334,7 @@ class Body extends BodyBase<BodyProperties> {
 							renderedDetails.delete = true;
 
 							// It still appears in the item mapping but not in the children
-							const updatedMeasured = itemElementMap.get(key);
+							const updatedMeasured = this.itemElementMap.get(key);
 							if (updatedMeasured) {
 								updatedItemElementMap.set(key, updatedMeasured);
 							}
@@ -589,16 +345,6 @@ class Body extends BodyBase<BodyProperties> {
 
 			// Store the updated item map
 			this.itemElementMap = updatedItemElementMap;
-		}
-
-		// Create a bottom margin if the data doesn't extend all the way to the end
-		if (offset + items.length + 1 < totalLength) {
-			children.push(v('div', {
-				key: 'marginBottom',
-				styles: {
-					height: (margin + 'px')
-				}
-			}));
 		}
 
 		return v('div', {
