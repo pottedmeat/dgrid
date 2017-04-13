@@ -27,6 +27,10 @@ export interface HasContent {
 	content: DNode;
 }
 
+export interface HasSliceEvent {
+	onSliceRequest(sliceDetails: SliceDetails): void;
+}
+
 export interface HasSortDetail {
 	sortDetail?: SortDetails;
 }
