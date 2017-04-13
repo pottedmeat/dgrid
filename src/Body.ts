@@ -6,7 +6,6 @@ import { DNode, PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import 'intersection-observer';
-import { diff } from './compare';
 import {
 	HasColumns, HasItems, HasSliceEvent, HasOffset, HasTotalLength, ItemProperties,
 	HasScrollTo, HasEstimatedRowHeight
@@ -32,8 +31,8 @@ export interface BodyProperties extends ThemeableProperties, HasColumns, HasEsti
 }
 
 const margin = 10000;
-const preload = 10;
-const drift = 2;
+const preload = 25;
+const drift = 5;
 
 @theme(bodyClasses)
 class Body extends BodyBase<BodyProperties> {
@@ -521,12 +520,32 @@ class Body extends BodyBase<BodyProperties> {
 				return key;
 			});
 
-			// Find the difference between the keys during
-			// the last render and those now
-			const keyPatches = diff(currentKeys, previousKeys);
-			const keyPatch = keyPatches[0];
-			if (keyPatch && keyPatch.removed && keyPatch.removed.length === previousKeys.length) {
-				// If everything was removed, we can start from scratch
+			// find which keys are new and at what index they will appear
+			let cleared = true;
+			let addedKeys: string[] = [];
+			const keyPatches: { [ index: number]: string[] } = {};
+			let previousKeyIndex = 0;
+			for (const currentKey of currentKeys) {
+				const foundAtIndex = previousKeys.indexOf(currentKey, previousKeyIndex);
+				if (foundAtIndex === -1) {
+					addedKeys.push(currentKey);
+				}
+				else {
+					if (addedKeys.length) {
+						keyPatches[previousKeyIndex] = addedKeys;
+						addedKeys = [];
+					}
+
+					cleared = false;
+					previousKeyIndex = (foundAtIndex + 1);
+				}
+			}
+			if (addedKeys.length) {
+				keyPatches[previousKeys.length] = addedKeys;
+			}
+
+			if (cleared) {
+				// If all keys are new, we can start from scratch
 				itemElementMap.clear();
 				return this.render();
 			}
@@ -536,18 +555,14 @@ class Body extends BodyBase<BodyProperties> {
 
 				const keyPatch = keyPatches[i];
 				if (keyPatch) {
-					if (keyPatch.added) {
-						for (const added of keyPatch.added) {
-							// Insert any newly introduced items
-							// that were added at this index
-							//
-							const addedKey = currentKeys[added.to];
-							children.push(itemsByKey[addedKey]);
+					for (const addedKey of keyPatch) {
+						// Insert any newly introduced items
+						// that were added at this index
+						children.push(itemsByKey[addedKey]);
 
-							const updatedMeasured = itemElementMap.get(addedKey);
-							if (updatedMeasured) {
-								updatedItemElementMap.set(addedKey, updatedMeasured);
-							}
+						const updatedMeasured = itemElementMap.get(addedKey);
+						if (updatedMeasured) {
+							updatedItemElementMap.set(addedKey, updatedMeasured);
 						}
 					}
 				}
