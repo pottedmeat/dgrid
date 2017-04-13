@@ -65,6 +65,11 @@ export interface RenderedValueColumn<T, U> extends Column<T> {
 	renderValue(value: U, item: ItemProperties<T>, column: Column<T>): DNode;
 }
 
+export interface SliceDetails {
+	start: number;
+	count: number;
+}
+
 export interface SortDetails {
 	columnId: string;
 	descending?: boolean;

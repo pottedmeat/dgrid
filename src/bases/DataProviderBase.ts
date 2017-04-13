@@ -1,13 +1,20 @@
 import { Observable, Observer } from '@dojo/core/Observable';
-import { SortDetails, DataProperties } from '../interfaces';
+import { SortDetails, DataProperties, SliceDetails } from '../interfaces';
+
+export interface DataProviderConfiguration {
+	slice?: SliceDetails;
+	sort?: SortDetails | SortDetails[];
+}
 
 export interface Options {
 	[option: string]: any;
+	configuration?: DataProviderConfiguration;
 }
 
 export interface DataProviderState<O extends Options> {
 	options: O;
-	sort: SortDetails[];
+	slice?: SliceDetails;
+	sort?: SortDetails[];
 }
 
 class DataProviderBase<T, O extends Options> {
@@ -18,9 +25,16 @@ class DataProviderBase<T, O extends Options> {
 	observers: Observer<DataProperties<T>>[];
 
 	constructor(options: O) {
+		const {
+			configuration: {
+				slice = undefined,
+				sort = []
+			} = {}
+		} = options;
 		this.state = {
 			options: options || {},
-			sort: []
+			slice,
+			sort: Array.isArray(sort) ? sort : [ sort ]
 		};
 		this.observable = new Observable((observer: Observer<DataProperties<T>>) => {
 			this.observers.push(observer);
@@ -29,21 +43,25 @@ class DataProviderBase<T, O extends Options> {
 			}
 		});
 		this.observers = [];
-
-		this.updateData();
 	}
 
 	buildData(state: DataProviderState<O>): DataProperties<T> {
 		return { items: [] };
 	}
 
-	configure({ sort }: { sort: SortDetails | SortDetails[] }) {
+	configure({ slice, sort = [] }: DataProviderConfiguration) {
+		this.state.slice = slice;
 		this.state.sort = Array.isArray(sort) ? sort : [ sort ];
 		this.updateData();
 	}
 
 	observe() {
 		return this.observable;
+	}
+
+	slice(slice: SliceDetails) {
+		this.state.slice = slice;
+		this.updateData();
 	}
 
 	sort(sort: SortDetails | SortDetails[]) {
