@@ -50,11 +50,14 @@ class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<
 		const built: DataProperties<T> = {
 			sort,
 			items: expand(items, idProperty),
-			totalLength: data.length
+			size: {
+				start: 0,
+				totalLength: data.length
+			}
 		};
 		if (slice) {
 			built.items = built.items.slice(slice.start, slice.start + slice.count);
-			built.offset = slice.start;
+			built.size && (built.size.start = slice.start);
 		}
 		return built;
 	}

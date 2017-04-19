@@ -7,7 +7,7 @@ import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins
 import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import 'intersection-observer';
 import {
-	HasColumns, HasItems, HasSliceEvent, HasOffset, HasTotalLength, ItemProperties,
+	HasColumns, HasItems, HasSliceEvent, HasSize, ItemProperties,
 	HasScrollTo, HasEstimatedRowHeight
 } from './interfaces';
 import { ScrollTo } from './Grid';
@@ -26,7 +26,7 @@ interface RenderedDetails {
 
 export const BodyBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
-export interface BodyProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasItems, HasOffset, HasTotalLength, HasScrollTo, HasSliceEvent, RegistryMixinProperties {
+export interface BodyProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasItems, HasSize, HasScrollTo, HasSliceEvent, RegistryMixinProperties {
 	onScrollToRequest(scrollTo: ScrollTo): void;
 }
 
@@ -147,12 +147,14 @@ class Body extends BodyBase<BodyProperties> {
 		clearTimeout(this.expectScroll);
 		this.updateIntersectionObserver();
 
+		const items = this.properties.items;
 		const {
 			itemElementMap,
 			properties: {
-				items,
-				totalLength,
-				offset,
+				size: {
+					start = 0,
+					totalLength = items.length
+				} = {},
 				onScrollToRequest,
 				onSliceRequest
 			},
@@ -174,9 +176,9 @@ class Body extends BodyBase<BodyProperties> {
 						// so we try to guess how many rows were skipped and jump
 						// down to that area
 						const estimatedRowHeight = this.estimatedRowHeight();
-						const start = Math.max(0, Math.min(totalLength - 1, (offset - Math.round(delta / estimatedRowHeight))));
-						console.log('out of bounds scrollTo', start);
-						onScrollToRequest({ index: start });
+						const scrollTo = Math.max(0, Math.min(totalLength - 1, (start - Math.round(delta / estimatedRowHeight))));
+						console.log('out of bounds scrollTo', scrollTo);
+						onScrollToRequest({ index: scrollTo });
 						return;
 					}
 					break;
@@ -190,9 +192,9 @@ class Body extends BodyBase<BodyProperties> {
 						// so we try to guess how many rows were skipped and jump
 						// down to that area
 						const estimatedRowHeight = this.estimatedRowHeight();
-						const start = Math.max(0, Math.min(totalLength - 1, (offset + items.length + Math.round(delta / estimatedRowHeight))));
-						console.log('out of bounds scrollTo', start);
-						onScrollToRequest({ index: start });
+						const scrollTo = Math.max(0, Math.min(totalLength - 1, (start + items.length + Math.round(delta / estimatedRowHeight))));
+						console.log('out of bounds scrollTo', scrollTo);
+						onScrollToRequest({ index: scrollTo });
 						return;
 					}
 					break;
@@ -208,25 +210,25 @@ class Body extends BodyBase<BodyProperties> {
 				// Use the index of the first row as a starting point
 				// as well as moving back a few rows so there's
 				// additional data above the scroll area
-				const start = Math.max(0, renderedDetails.index - preload);
-				let count = (Math.min(renderedDetails.index, preload) + visibleKeys.length + preload);
+				const sliceStart = Math.max(0, renderedDetails.index - preload);
+				let sliceCount = (Math.min(renderedDetails.index, preload) + visibleKeys.length + preload);
 				// Use the start value we found and request an amount of data
 				// equal to the additional data above the scroll area, the number
 				// of visible rows and the additional data below the scroll area
-				if (start + count > totalLength) {
+				if (sliceStart + sliceCount > totalLength) {
 					// If we've reached the data limit
 					// only ask for as many rows as are left
-					count = (totalLength - start);
+					sliceCount = (totalLength - sliceStart);
 				}
 
 				// Limit data requests so that we only ever ask for
 				// a. start/count combinations that differ from what we already have (see c.)
 				// b. a start or end index that exceeds a limit we're comfortable with
 				// c. the very start or very end of the data even if that limit is not reached
-				if ((start !== offset || count !== items.length) && (start === 0 || Math.abs(start - offset) > drift || Math.abs(count - items.length) > drift || (start + count) === totalLength)) {
+				if ((sliceStart !== start || sliceCount !== items.length) && (sliceStart === 0 || Math.abs(sliceStart - start) > drift || Math.abs(sliceCount - items.length) > drift || (sliceStart + sliceCount) === totalLength)) {
 					// TODO: Throttle?
-					console.log('onScroll slice', start, count);
-					onSliceRequest && onSliceRequest({ start, count });
+					console.log('onScroll slice', sliceStart, sliceCount);
+					onSliceRequest && onSliceRequest({ start: sliceStart, count: sliceCount });
 				}
 			}
 		}
@@ -243,10 +245,12 @@ class Body extends BodyBase<BodyProperties> {
 			return;
 		}
 		if (key === 'scroller') {
+			const items = this.properties.items;
 			const {
 				properties: {
-					items,
-					offset,
+					size: {
+						start = 0
+					} = {},
 					onSliceRequest
 				}
 			} = this;
@@ -257,8 +261,8 @@ class Body extends BodyBase<BodyProperties> {
 				// If there has been no data passed (e.g. during initialization)
 				// wait until the scroll area appears to get a more accurate
 				// estimate of how many rows to ask for initially
-				console.log('empty items slice', offset, this.estimatedRowCount());
-				onSliceRequest && onSliceRequest({ start: offset, count: this.estimatedRowCount() });
+				console.log('empty items slice', start, this.estimatedRowCount());
+				onSliceRequest && onSliceRequest({ start: start, count: this.estimatedRowCount() });
 			}
 			else {
 				// We hit this when the children of the scroll area change
@@ -334,7 +338,6 @@ class Body extends BodyBase<BodyProperties> {
 				marginTop,
 				properties: {
 					onScrollToComplete,
-					offset,
 					scrollTo
 				},
 				scroller
@@ -463,12 +466,14 @@ class Body extends BodyBase<BodyProperties> {
 	}
 
 	render(): DNode {
+		const items = this.properties.items;
 		const {
 			itemElementMap,
 			properties: {
-				items,
-				offset,
-				totalLength
+				size: {
+					start = 0,
+					totalLength = items.length
+				} = {}
 			}
 		} = this;
 
@@ -476,7 +481,7 @@ class Body extends BodyBase<BodyProperties> {
 
 		// Create a top margin if the data has any offset at all
 		let marginTop = this.marginTop;
-		if (offset > 0) {
+		if (start > 0) {
 			if (!marginTop) {
 				marginTop = this.marginTop = {
 					add: true,
@@ -503,7 +508,7 @@ class Body extends BodyBase<BodyProperties> {
 			// There were no item rows the last time render was called
 			// so every row is added
 			for (let i = 0, item; (item = items[i]); i++) {
-				children.push(this.createNodeFromItem(item, (offset + i)));
+				children.push(this.createNodeFromItem(item, (start + i)));
 			}
 		}
 		else {
@@ -516,7 +521,7 @@ class Body extends BodyBase<BodyProperties> {
 				const key = item.id;
 				// createNodeFromItem marks this item as having been added
 				// automatically if it didn't have a mapping already
-				itemsByKey[key] = this.createNodeFromItem(item, (offset + index));
+				itemsByKey[key] = this.createNodeFromItem(item, (start + index));
 				return key;
 			});
 
@@ -607,7 +612,7 @@ class Body extends BodyBase<BodyProperties> {
 		}
 
 		// Create a bottom margin if the data doesn't extend all the way to the end
-		if (offset + items.length + 1 < totalLength) {
+		if (start + items.length + 1 < totalLength) {
 			children.push(v('div', {
 				key: 'marginBottom',
 				styles: {

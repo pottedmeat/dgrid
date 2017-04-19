@@ -102,9 +102,8 @@ class Grid extends GridBase<GridProperties> {
 			data: {
 				items = [],
 				sort = [],
-				offset = 0,
-				totalLength = 0
-			} = {},
+				size
+			} = <DataProperties<any>> {},
 			properties: {
 				theme,
 				columns,
@@ -136,8 +135,7 @@ class Grid extends GridBase<GridProperties> {
 				columns,
 				estimatedRowHeight,
 				items,
-				offset,
-				totalLength,
+				size,
 				onSliceRequest: onSliceRequest && onSliceRequest.bind(dataProvider),
 				scrollTo,
 				onScrollToComplete: this.onScrollToComplete,

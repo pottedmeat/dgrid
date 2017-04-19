@@ -18,11 +18,15 @@ export interface ItemProperties<T> {
 	data: T;
 }
 
+export interface SizeDetails {
+	start: number;
+	totalLength: number;
+}
+
 export interface DataProperties<T> {
 	items: ItemProperties<T>[];
 	sort?: SortDetails[];
-	offset?: number;
-	totalLength?: number;
+	size?: SizeDetails;
 }
 
 export interface CellRendererProperties extends WidgetProperties, HasValue, HasColumn, HasItem, RegistryMixinProperties { }
@@ -79,12 +83,8 @@ export interface HasValue {
 	value: string;
 }
 
-export interface HasOffset {
-	offset: number;
-}
-
-export interface HasTotalLength {
-	totalLength: number;
+export interface HasSize {
+	size?: SizeDetails;
 }
 
 export interface HasSliceEvent {
