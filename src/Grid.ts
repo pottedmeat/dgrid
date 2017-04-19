@@ -4,7 +4,7 @@ import { v, w } from '@dojo/widget-core/d';
 import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
 import { PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
-import WidgetBase, { diffProperty, onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
+import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import DataProviderBase, { Options } from './bases/DataProviderBase';
 import Body, { BodyProperties } from './Body';
 import Cell from './Cell';

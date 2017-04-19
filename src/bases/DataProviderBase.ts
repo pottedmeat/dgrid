@@ -55,7 +55,7 @@ class DataProviderBase<T, O extends Options> {
 		this.updateData();
 	}
 
-	observe() {
+	observe(): Observable<DataProperties<T>> {
 		return this.observable;
 	}
 

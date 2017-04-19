@@ -21,6 +21,8 @@ export interface ItemProperties<T> {
 export interface SizeDetails {
 	start: number;
 	totalLength: number;
+	min?: number;
+	max?: number;
 }
 
 export interface DataProperties<T> {
@@ -89,4 +91,9 @@ export interface HasSize {
 
 export interface HasSliceEvent {
 	onSliceRequest(sliceDetails: SliceDetails): void;
+}
+
+export interface SlicePageDetails {
+	page: number;
+	itemsPerPage: number;
 }
