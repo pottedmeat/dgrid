@@ -123,20 +123,22 @@ export function PaginationDataProviderMixin<P extends DataProperties<any>, O ext
 		}
 
 		protected processData(data: P): P & GridPaginationDataProperties {
-			// min/max locks the data set down to only passed items
-			const itemsLength = data.items.length;
-			if (!data.size) {
-				data.size = {
-					start: 0,
-					totalLength: itemsLength,
-					min: 0,
-					max: (itemsLength - 1)
-				};
-			}
-			else {
-				const start = data.size.start;
-				data.size.min = start;
-				data.size.max = (start + itemsLength - 1);
+			const state: S & GridPaginationDataProviderState = <any> this.__state__();
+			if (state.page && state.itemsPerPage) {
+				const itemsLength = data.items.length;
+				if (!data.size) {
+					data.size = {
+						start: 0,
+						totalLength: itemsLength,
+						min: 0,
+						max: (itemsLength - 1)
+					};
+				}
+				else {
+					const start = data.size.start;
+					data.size.min = start;
+					data.size.max = (start + itemsLength - 1);
+				}
 			}
 			return <any> data;
 		}
