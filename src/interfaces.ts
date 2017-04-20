@@ -2,6 +2,11 @@ import { WidgetProperties, WidgetBaseConstructor } from '@dojo/widget-core/inter
 import { RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import { ScrollTo } from './Grid';
 
+/**
+ * Generic constructor type
+ */
+export type Constructor<T> = new (...args: any[]) => T;
+
 export interface SliceDetails {
 	start: number;
 	count: number;

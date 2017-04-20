@@ -6,6 +6,7 @@ import { WidgetProperties } from '@dojo/widget-core/interfaces';
 import { w } from '@dojo/widget-core/d';
 import { GridProperties } from '../Grid';
 import { HasScrollTo } from '../interfaces';
+import { PaginationDataProviderMixin } from '../GridPagination';
 
 const data = [
 	{ order: 1, name: 'preheat', description: 'Preheat your oven to 350F' },
@@ -26,7 +27,7 @@ for (let i = 1; i <= 10000; i++) {
 	instructions.push(instruction);
 }
 
-const dataProvider = new ArrayDataProvider({
+const dataProvider = new (PaginationDataProviderMixin(ArrayDataProvider))({
 	idProperty: 'order',
 	data: instructions
 });

@@ -153,7 +153,9 @@ class Body extends BodyBase<BodyProperties> {
 			properties: {
 				size: {
 					start = 0,
-					totalLength = items.length
+					totalLength = items.length,
+					min = 0,
+					max: _max = -1
 				} = {},
 				onScrollToRequest,
 				onSliceRequest
@@ -161,6 +163,8 @@ class Body extends BodyBase<BodyProperties> {
 			scroller,
 			visibleKeys
 		} = this;
+		const max = (_max !== -1) ? _max : (totalLength - 1);
+		console.log('min:', min, 'max:', max);
 
 		if (visibleKeys.length === 0) {
 			// This happens during a very rapid scroll
@@ -176,7 +180,7 @@ class Body extends BodyBase<BodyProperties> {
 						// so we try to guess how many rows were skipped and jump
 						// down to that area
 						const estimatedRowHeight = this.estimatedRowHeight();
-						const scrollTo = Math.max(0, Math.min(totalLength - 1, (start - Math.round(delta / estimatedRowHeight))));
+						const scrollTo = Math.max(min, Math.min(max, (start - Math.round(delta / estimatedRowHeight))));
 						console.log('out of bounds scrollTo', scrollTo);
 						onScrollToRequest({ index: scrollTo });
 						return;
@@ -192,7 +196,7 @@ class Body extends BodyBase<BodyProperties> {
 						// so we try to guess how many rows were skipped and jump
 						// down to that area
 						const estimatedRowHeight = this.estimatedRowHeight();
-						const scrollTo = Math.max(0, Math.min(totalLength - 1, (start + items.length + Math.round(delta / estimatedRowHeight))));
+						const scrollTo = Math.max(min, Math.min(max, (start + items.length + Math.round(delta / estimatedRowHeight))));
 						console.log('out of bounds scrollTo', scrollTo);
 						onScrollToRequest({ index: scrollTo });
 						return;
@@ -210,22 +214,22 @@ class Body extends BodyBase<BodyProperties> {
 				// Use the index of the first row as a starting point
 				// as well as moving back a few rows so there's
 				// additional data above the scroll area
-				const sliceStart = Math.max(0, renderedDetails.index - preload);
+				const sliceStart = Math.max(min, renderedDetails.index - preload);
 				let sliceCount = (Math.min(renderedDetails.index, preload) + visibleKeys.length + preload);
 				// Use the start value we found and request an amount of data
 				// equal to the additional data above the scroll area, the number
 				// of visible rows and the additional data below the scroll area
-				if (sliceStart + sliceCount > totalLength) {
+				if (sliceStart + sliceCount - 1 > max) {
 					// If we've reached the data limit
 					// only ask for as many rows as are left
-					sliceCount = (totalLength - sliceStart);
+					sliceCount = (max - sliceStart + 1);
 				}
 
 				// Limit data requests so that we only ever ask for
 				// a. start/count combinations that differ from what we already have (see c.)
 				// b. a start or end index that exceeds a limit we're comfortable with
 				// c. the very start or very end of the data even if that limit is not reached
-				if ((sliceStart !== start || sliceCount !== items.length) && (sliceStart === 0 || Math.abs(sliceStart - start) > drift || Math.abs(sliceCount - items.length) > drift || (sliceStart + sliceCount) === totalLength)) {
+				if ((sliceStart !== start || sliceCount !== items.length) && (sliceStart === min || Math.abs(sliceStart - start) > drift || Math.abs(sliceCount - items.length) > drift || (sliceStart + sliceCount) === max)) {
 					// TODO: Throttle?
 					console.log('onScroll slice', sliceStart, sliceCount);
 					onSliceRequest && onSliceRequest({ start: sliceStart, count: sliceCount });
@@ -472,16 +476,19 @@ class Body extends BodyBase<BodyProperties> {
 			properties: {
 				size: {
 					start = 0,
-					totalLength = items.length
+					totalLength = items.length,
+					min = 0,
+					max: _max = -1
 				} = {}
 			}
 		} = this;
+		const max = (_max !== -1) ? _max : (totalLength - 1);
 
 		const children: DNode[] = [];
 
 		// Create a top margin if the data has any offset at all
 		let marginTop = this.marginTop;
-		if (start > 0) {
+		if (start > min) {
 			if (!marginTop) {
 				marginTop = this.marginTop = {
 					add: true,
@@ -612,7 +619,7 @@ class Body extends BodyBase<BodyProperties> {
 		}
 
 		// Create a bottom margin if the data doesn't extend all the way to the end
-		if (start + items.length + 1 < totalLength) {
+		if (start + items.length < max) {
 			children.push(v('div', {
 				key: 'marginBottom',
 				styles: {

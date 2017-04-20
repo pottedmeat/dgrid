@@ -4,8 +4,8 @@ import { Subscription } from '@dojo/shim/Observable';
 import { w } from '@dojo/widget-core/d';
 import WidgetBase, { diffProperty, onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import { DNode, PropertyChangeRecord, PropertiesChangeEvent, WidgetBaseConstructor, WidgetProperties } from '@dojo/widget-core/interfaces';
-import DataProviderBase, { Options } from './bases/DataProviderBase';
-import { DataProperties, SizeDetails, SlicePageDetails } from './interfaces';
+import DataProviderBase, { Options, DataProviderState } from './bases/DataProviderBase';
+import { DataProperties, SizeDetails, SlicePageDetails, Constructor, SliceDetails } from './interfaces';
 
 export interface PaginationProperties {
 	page: number;
@@ -22,11 +22,15 @@ export interface GridPaginationDataProperties extends DataProperties<any> {
 	size: GridPaginationSizeDetails;
 }
 
-export interface GridPaginationDataProvider extends DataProviderBase<any, Options> {
+export interface GridPaginationDataProviderState extends DataProviderState<Options> {
+	page: number;
+	itemsPerPage: number;
+}
+
+export interface GridPaginationDataProvider extends DataProviderBase<GridPaginationDataProperties, Options, GridPaginationDataProviderState> {
 	slicePage(slice: SlicePageDetails): void;
 	observe(): Observable<GridPaginationDataProperties>;
 }
-
 
 export interface HasGridPaginationPage {
 	page?: number;
@@ -39,7 +43,7 @@ export interface GridPaginationProperties extends WidgetProperties, Partial<HasG
 	paginationConstructor: WidgetBaseConstructor<PaginationProperties> | string;
 }
 
-class GridPagination extends WidgetBase<GridPaginationProperties> {
+export class GridPagination extends WidgetBase<GridPaginationProperties> {
 	private page = 1;
 	private pages = 1;
 	private subscription: Subscription;
@@ -104,4 +108,38 @@ class GridPagination extends WidgetBase<GridPaginationProperties> {
 			onPageRequest: this.onPageRequest
 		});
 	}
+}
+
+export function PaginationDataProviderMixin<P extends DataProperties<any>, O extends Options, S extends DataProviderState<O>, T extends Constructor<DataProviderBase<P, O, S>>>(Base: T): Constructor<DataProviderBase<P, O, S>> {
+	class PaginationDataProvider extends Base {
+		slicePage(slice: SlicePageDetails): void {
+			const state: S & GridPaginationDataProviderState = <any> this.__state__();
+			state.page = slice.page;
+			state.itemsPerPage = slice.itemsPerPage;
+			this.slice({
+				start: (state.page - 1) * state.itemsPerPage,
+				count: state.itemsPerPage
+			});
+		}
+
+		protected processData(data: P): P & GridPaginationDataProperties {
+			// min/max locks the data set down to only passed items
+			const itemsLength = data.items.length;
+			if (!data.size) {
+				data.size = {
+					start: 0,
+					totalLength: itemsLength,
+					min: 0,
+					max: (itemsLength - 1)
+				};
+			}
+			else {
+				const start = data.size.start;
+				data.size.min = start;
+				data.size.max = (start + itemsLength - 1);
+			}
+			return <any> data;
+		}
+	};
+	return PaginationDataProvider;
 }

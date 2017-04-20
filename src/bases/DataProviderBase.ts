@@ -17,12 +17,16 @@ export interface DataProviderState<O extends Options> {
 	sort?: SortDetails[];
 }
 
-class DataProviderBase<T, O extends Options> {
-	private data: DataProperties<T>;
-	private state: DataProviderState<O>;
+/**
+ * T: Data type
+ * O: Options passed to the constructor
+ */
+class DataProviderBase<P extends DataProperties<any>, O extends Options, S extends DataProviderState<O>> {
+	private data: P;
+	private state: S;
 
-	observable: Observable<DataProperties<T>>;
-	observers: Observer<DataProperties<T>>[];
+	observable: Observable<P>;
+	observers: Observer<P>[];
 
 	constructor(options: O) {
 		const {
@@ -31,12 +35,12 @@ class DataProviderBase<T, O extends Options> {
 				sort = []
 			} = {}
 		} = options;
-		this.state = {
+		this.state = <S> {
 			options: options || {},
 			slice,
 			sort: Array.isArray(sort) ? sort : [ sort ]
 		};
-		this.observable = new Observable((observer: Observer<DataProperties<T>>) => {
+		this.observable = new Observable((observer: Observer<P>) => {
 			this.observers.push(observer);
 			if (this.data) {
 				observer.next(this.data);
@@ -45,8 +49,12 @@ class DataProviderBase<T, O extends Options> {
 		this.observers = [];
 	}
 
-	buildData(state: DataProviderState<O>): DataProperties<T> {
-		return { items: [] };
+	protected __state__(): S {
+		return this.state;
+	}
+
+	buildData(state: S): P {
+		return <any> { items: [] };
 	}
 
 	configure({ slice, sort = [] }: Configuration) {
@@ -55,8 +63,12 @@ class DataProviderBase<T, O extends Options> {
 		this.updateData();
 	}
 
-	observe(): Observable<DataProperties<T>> {
+	observe(): Observable<P> {
 		return this.observable;
+	}
+
+	protected processData(data: P): P {
+		return data;
 	}
 
 	slice(slice: SliceDetails) {
@@ -72,8 +84,8 @@ class DataProviderBase<T, O extends Options> {
 		this.updateData();
 	}
 
-	updateData() {
-		const data = this.data = this.buildData(this.state);
+	protected updateData(): void {
+		const data = this.data = this.processData(this.buildData(this.state));
 		this.observers.forEach((observer) => {
 			observer.next(data);
 		});

@@ -32,7 +32,7 @@ export interface ScrollTo {
  */
 export interface GridProperties extends ThemeableProperties, HasColumns, Partial<HasEstimatedRowHeight>, Partial<HasScrollTo> {
 	registry?: WidgetRegistry;
-	dataProvider: DataProviderBase<any, Options>;
+	dataProvider: DataProviderBase<any, Options, any>;
 }
 
 function createRegistry(partialRegistry?: WidgetRegistry) {

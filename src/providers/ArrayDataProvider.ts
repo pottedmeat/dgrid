@@ -18,7 +18,7 @@ function expand(items: any[], idProperty: string, index = 0, array = <ItemProper
 	return array;
 }
 
-class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<T>> {
+class ArrayDataProvider<T> extends DataProviderBase<DataProperties<T>, ArrayDataProviderOptions<T>, DataProviderState<ArrayDataProviderOptions<T>>> {
 	buildData(state: DataProviderState<ArrayDataProviderOptions<T>>): DataProperties<T> {
 		const {
 			options: {
