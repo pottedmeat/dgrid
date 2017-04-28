@@ -60,7 +60,7 @@ export class GridPagination extends WidgetBase<GridPaginationProperties> {
 		};
 	}
 
-	@onPropertiesChanged()
+	@onPropertiesChanged
 	protected onPropertiesChanged(evt: PropertiesChangeEvent<this, GridPaginationProperties>) {
 		const {
 			dataProvider
