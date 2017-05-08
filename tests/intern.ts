@@ -62,7 +62,7 @@ export const loaderOptions = {
 };
 
 // Non-functional test suite(s) to run in each browser
-export const suites = [ 'tests/unit/all' ];
+export const suites = [];
 
 // Functional test suite(s) to run in each browser once non-functional tests are completed
 export const functionalSuites = [ 'tests/functional/all' ];

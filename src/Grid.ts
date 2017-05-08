@@ -6,9 +6,9 @@ import { PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import DataProviderBase, { Options } from './bases/DataProviderBase';
-import Body, { BodyProperties } from './Body';
+import Body from './Body';
 import Cell from './Cell';
-import Header, { HeaderProperties } from './Header';
+import Header	 from './Header';
 import HeaderCell from './HeaderCell';
 import { DataProperties, HasColumns, HasEstimatedRowHeight, HasScrollTo } from './interfaces';
 import Row from './Row';
@@ -35,15 +35,12 @@ export interface GridProperties extends ThemeableProperties, HasColumns, Partial
 	dataProvider: DataProviderBase<any, Options, any>;
 }
 
-function createRegistry(partialRegistry?: WidgetRegistry) {
-	const registry = new WidgetRegistry();
-	registry.define('header', (partialRegistry && partialRegistry.get('header')) || Header);
-	registry.define('header-cell', (partialRegistry && partialRegistry.get('header-cell')) || HeaderCell);
-	registry.define('body', (partialRegistry && partialRegistry.get('body')) || Body);
-	registry.define('row', (partialRegistry && partialRegistry.get('row')) || Row);
-	registry.define('cell', (partialRegistry && partialRegistry.get('cell')) || Cell);
-	return registry;
-}
+const gridRegistry = new WidgetRegistry();
+gridRegistry.define('header', Header);
+gridRegistry.define('header-cell', HeaderCell);
+gridRegistry.define('body', Body);
+gridRegistry.define('row', Row);
+gridRegistry.define('cell', Cell);
 
 @theme(gridClasses)
 class Grid extends GridBase<GridProperties> {
@@ -55,12 +52,7 @@ class Grid extends GridBase<GridProperties> {
 	constructor() {
 		super();
 
-		this.registry = createRegistry();
-	}
-
-	public setProperties(properties: GridProperties): void {
-		properties.registry = createRegistry(properties.registry);
-		super.setProperties(properties);
+		this.registries.add(gridRegistry);
 	}
 
 	private onScrollToRequest(scrollTo: ScrollTo) {
@@ -77,8 +69,7 @@ class Grid extends GridBase<GridProperties> {
 	@onPropertiesChanged()
 	protected onPropertiesChanged(evt: PropertiesChangeEvent<this, GridProperties>) {
 		const {
-			dataProvider,
-			registry
+			dataProvider
 		} = evt.properties;
 
 		if (includes(evt.changedPropertyKeys, 'dataProvider')) {
@@ -90,10 +81,6 @@ class Grid extends GridBase<GridProperties> {
 				this.data = data;
 				this.invalidate();
 			});
-		}
-
-		if (registry && !this.registry && includes(evt.changedPropertyKeys, 'registry')) {
-			this.registry = createRegistry(registry);
 		}
 	}
 
@@ -110,26 +97,26 @@ class Grid extends GridBase<GridProperties> {
 				dataProvider,
 				scrollTo = this.scrollTo,
 				estimatedRowHeight = 20
-			},
-			registry
+			}
 		} = this;
 		const {
 			slice: onSliceRequest,
 			sort: onSortRequest
 		} = dataProvider;
+		const registry: WidgetRegistry = <any> this.registries;
 
 		return v('div', {
 			classes: this.classes(gridClasses.grid),
 			role: 'grid'
 		}, [
-			w<HeaderProperties>('header', {
+			w<Header>('header', {
 				registry,
 				theme,
 				columns,
 				sortDetails: sort,
 				onSortRequest: onSortRequest && onSortRequest.bind(dataProvider)
 			}),
-			w<BodyProperties>('body', {
+			w<Body>('body', {
 				registry,
 				theme,
 				columns,

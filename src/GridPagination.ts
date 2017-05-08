@@ -5,7 +5,7 @@ import { w } from '@dojo/widget-core/d';
 import WidgetBase, { diffProperty, onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import { DNode, PropertyChangeRecord, PropertiesChangeEvent, WidgetBaseConstructor, WidgetProperties } from '@dojo/widget-core/interfaces';
 import DataProviderBase, { Options, DataProviderState } from './bases/DataProviderBase';
-import { DataProperties, SizeDetails, SlicePageDetails, Constructor, SliceDetails } from './interfaces';
+import { DataProperties, SizeDetails, SlicePageDetails, Constructor } from './interfaces';
 
 export interface PaginationProperties {
 	page: number;
@@ -60,7 +60,7 @@ export class GridPagination extends WidgetBase<GridPaginationProperties> {
 		};
 	}
 
-	@onPropertiesChanged
+	@onPropertiesChanged()
 	protected onPropertiesChanged(evt: PropertiesChangeEvent<this, GridPaginationProperties>) {
 		const {
 			dataProvider
@@ -102,7 +102,7 @@ export class GridPagination extends WidgetBase<GridPaginationProperties> {
 	}
 
 	render(): DNode {
-		return w<PaginationProperties>(this.properties.paginationConstructor, {
+		return w(this.properties.paginationConstructor, <PaginationProperties> {
 			page: this.page,
 			pages: this.pages,
 			onPageRequest: this.onPageRequest

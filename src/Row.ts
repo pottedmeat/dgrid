@@ -4,7 +4,7 @@ import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { DNode } from '@dojo/widget-core/interfaces';
-import { CellProperties } from './Cell';
+import Cell from './Cell';
 import { HasColumns, ItemProperties } from './interfaces';
 
 import * as rowClasses from './styles/row.m.css';
@@ -21,9 +21,9 @@ class Row extends RowBase<RowProperties> {
 		const {
 			properties: {
 				item,
-				columns = []
-			},
-			registry = dRegistry
+				columns = [],
+				registry = dRegistry
+			}
 		} = this;
 
 		return v('table', {
@@ -33,7 +33,7 @@ class Row extends RowBase<RowProperties> {
 			v('tr', columns.map((column) => {
 				const { id, field } = column;
 
-				return w<CellProperties>('cell', {
+				return w<Cell>('cell', {
 					registry,
 					key: id,
 					column,

@@ -2,7 +2,7 @@ import { registry as dRegistry, v, w } from '@dojo/widget-core/d';
 import { RegistryMixin, RegistryMixinProperties }  from '@dojo/widget-core/mixins/Registry';
 import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
-import { HeaderCellProperties } from './HeaderCell';
+import HeaderCell from './HeaderCell';
 import { HasColumns, HasSortDetails, HasSortEvent } from './interfaces';
 
 import * as headerClasses from './styles/header.m.css';
@@ -18,10 +18,10 @@ class Header extends HeaderBase<HeaderProperties> {
 			properties: {
 				onSortRequest,
 				columns,
+				registry = dRegistry,
 				sortDetails = [],
 				theme
-			},
-			registry = dRegistry
+			}
 		} = this;
 
 		return v('div', {
@@ -41,7 +41,7 @@ class Header extends HeaderBase<HeaderProperties> {
 						}
 					}
 
-					return w<HeaderCellProperties>('header-cell', {
+					return w<HeaderCell>('header-cell', {
 						key: column.id,
 						column,
 						sortDetail,

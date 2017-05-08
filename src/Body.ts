@@ -11,7 +11,7 @@ import {
 	HasScrollTo, HasEstimatedRowHeight
 } from './interfaces';
 import { ScrollTo } from './Grid';
-import { RowProperties } from './Row';
+import Row from './Row';
 import { ThemeableMixin, theme, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 
 import * as bodyClasses from './styles/body.m.css';
@@ -435,9 +435,9 @@ class Body extends BodyBase<BodyProperties> {
 			itemElementMap,
 			properties: {
 				columns,
-				theme
-			},
-			registry = dRegistry
+				theme,
+				registry = dRegistry
+			}
 		} = this;
 
 		const key = item.id;
@@ -459,7 +459,7 @@ class Body extends BodyBase<BodyProperties> {
 			role: 'row',
 			classes: this.classes(bodyClasses.row)
 		}, [
-			w<RowProperties>('row', {
+			w<Row>('row', {
 				key,
 				item,
 				columns,
