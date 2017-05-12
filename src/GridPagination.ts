@@ -3,33 +3,18 @@ import { includes } from '@dojo/shim/array';
 import { Subscription } from '@dojo/shim/Observable';
 import { w } from '@dojo/widget-core/d';
 import WidgetBase, { diffProperty, onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
-import { DNode, PropertyChangeRecord, PropertiesChangeEvent, WidgetBaseConstructor, WidgetProperties } from '@dojo/widget-core/interfaces';
-import DataProviderBase, { Options, DataProviderState } from './bases/DataProviderBase';
-import { DataProperties, SizeDetails, SlicePageDetails, Constructor } from './interfaces';
+import { DNode, PropertyChangeRecord, PropertiesChangeEvent, WidgetBaseConstructor, WidgetBaseInterface, WidgetProperties } from '@dojo/widget-core/interfaces';
+import DataProviderBase, { DataProviderState } from './bases/DataProviderBase';
+import { SlicePageDetails, Constructor } from './interfaces';
+import { PaginationProperties } from './Pagination';
 
-export interface PaginationProperties {
-	page: number;
-	pages: number;
-	onPageRequest(page: number): void;
-}
-
-export interface GridPaginationSizeDetails extends SizeDetails {
-	min: number;
-	max: number;
-}
-
-export interface GridPaginationDataProperties extends DataProperties<any> {
-	size: GridPaginationSizeDetails;
-}
-
-export interface GridPaginationDataProviderState extends DataProviderState<Options> {
+export interface GridPaginationDataProviderState extends DataProviderState {
 	page: number;
 	itemsPerPage: number;
 }
 
-export interface GridPaginationDataProvider extends DataProviderBase<GridPaginationDataProperties, Options, GridPaginationDataProviderState> {
+export interface GridPaginationDataProvider<T> extends DataProviderBase<T> {
 	slicePage(slice: SlicePageDetails): void;
-	observe(): Observable<GridPaginationDataProperties>;
 }
 
 export interface HasGridPaginationPage {
@@ -38,15 +23,14 @@ export interface HasGridPaginationPage {
 }
 
 export interface GridPaginationProperties extends WidgetProperties, Partial<HasGridPaginationPage> {
-	dataProvider: GridPaginationDataProvider;
+	dataProvider: GridPaginationDataProvider<any>;
 	itemsPerPage: number;
 	paginationConstructor: WidgetBaseConstructor<PaginationProperties> | string;
 }
 
 export class GridPagination extends WidgetBase<GridPaginationProperties> {
-	private page = 1;
-	private pages = 1;
-	private subscription: Subscription;
+	private _data?: GridPaginationDataProvider<any>['data'];
+	private _subscription: Subscription;
 
 	@diffProperty('page')
 	onDiffPropertyPage(previousPage: number, newPage: number): PropertyChangeRecord {
@@ -67,21 +51,12 @@ export class GridPagination extends WidgetBase<GridPaginationProperties> {
 		} = evt.properties;
 
 		if (includes(evt.changedPropertyKeys, 'dataProvider')) {
-			if (this.subscription) {
-				this.subscription.unsubscribe();
+			if (this._subscription) {
+				this._subscription.unsubscribe();
 			}
 
-			this.subscription = dataProvider.observe().subscribe((data) => {
-				const {
-					size: {
-						min,
-						totalLength
-					}
-				} = data;
-				const itemsPerPage = this.properties.itemsPerPage;
-
-				this.page = Math.floor(min / itemsPerPage) + 1;
-				this.pages = Math.ceil(totalLength / itemsPerPage);
+			this._subscription = dataProvider.observe().subscribe((data) => {
+				this._data = data;
 				this.invalidate();
 			});
 		}
@@ -102,18 +77,47 @@ export class GridPagination extends WidgetBase<GridPaginationProperties> {
 	}
 
 	render(): DNode {
-		return w(this.properties.paginationConstructor, <PaginationProperties> {
-			page: this.page,
-			pages: this.pages,
-			onPageRequest: this.onPageRequest
-		});
+		const {
+			_data: data,
+			properties: {
+				itemsPerPage
+			}
+		} = this;
+		if (!data) {
+			this.onPageRequest(1);
+		}
+		else if (data.size) {
+			const items = data.items;
+			const {
+				size: {
+					min = -1,
+					totalLength = items.length
+				} = {}
+			} = data;
+
+			if (min === -1) {
+				throw new Error('Missing size.min in data properties');
+			}
+
+			const page = Math.floor(min / itemsPerPage) + 1;
+			const pages = Math.ceil(totalLength / itemsPerPage);
+			const status = `${min + 1} - ${Math.min(min + itemsPerPage, page * itemsPerPage)} of ${totalLength} results`;
+			return w<WidgetBaseInterface<PaginationProperties, DNode>>(this.properties.paginationConstructor, {
+				page,
+				pages,
+				status,
+				onPageRequest: this.onPageRequest
+			});
+		}
+
+		return null;
 	}
 }
 
-export function PaginationDataProviderMixin<P extends DataProperties<any>, O extends Options, S extends DataProviderState<O>, T extends Constructor<DataProviderBase<P, O, S>>>(Base: T): Constructor<DataProviderBase<P, O, S>> {
-	class PaginationDataProvider extends Base {
+export function PaginationDataProviderMixin<T extends Constructor<DataProviderBase<any>>>(Base: T) {
+	return class extends Base {
 		slicePage(slice: SlicePageDetails): void {
-			const state: S & GridPaginationDataProviderState = <any> this.__state__();
+			const state = <GridPaginationDataProviderState> this.state;
 			state.page = slice.page;
 			state.itemsPerPage = slice.itemsPerPage;
 			this.slice({
@@ -122,26 +126,24 @@ export function PaginationDataProviderMixin<P extends DataProperties<any>, O ext
 			});
 		}
 
-		protected processData(data: P): P & GridPaginationDataProperties {
-			const state: S & GridPaginationDataProviderState = <any> this.__state__();
-			if (state.page && state.itemsPerPage) {
-				const itemsLength = data.items.length;
-				if (!data.size) {
-					data.size = {
-						start: 0,
-						totalLength: itemsLength,
-						min: 0,
-						max: (itemsLength - 1)
-					};
-				}
-				else {
-					const start = data.size.start;
-					data.size.min = start;
-					data.size.max = (start + itemsLength - 1);
-				}
+		protected processData(): void {
+			super.processData();
+
+			const data = this.data;
+			const itemsLength = data.items.length;
+			if (!data.size) {
+				data.size = {
+					start: 0,
+					totalLength: itemsLength,
+					min: 0,
+					max: (itemsLength - 1)
+				};
 			}
-			return <any> data;
+			else {
+				const start = data.size.start;
+				data.size.min = start;
+				data.size.max = (start + itemsLength - 1);
+			}
 		}
 	};
-	return PaginationDataProvider;
 }

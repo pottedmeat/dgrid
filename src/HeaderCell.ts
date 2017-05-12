@@ -45,7 +45,7 @@ class HeaderCell extends HeaderCellBase<HeaderCellProperties> {
 
 		return v('th', {
 			role: 'columnheader',
-			...onclick,
+			// ...onclick,
 			classes: this.classes(...classes)
 		}, [
 			v('span', [ column.label || column.id ]),

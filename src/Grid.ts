@@ -2,10 +2,10 @@ import { includes } from '@dojo/shim/array';
 import { Subscription } from '@dojo/shim/Observable';
 import { v, w } from '@dojo/widget-core/d';
 import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
-import { PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
+import { DNode, PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
-import DataProviderBase, { Options } from './bases/DataProviderBase';
+import DataProviderBase from './bases/DataProviderBase';
 import Body from './Body';
 import Cell from './Cell';
 import Header	 from './Header';
@@ -14,6 +14,7 @@ import { DataProperties, HasColumns, HasEstimatedRowHeight, HasScrollTo } from '
 import Row from './Row';
 
 import * as gridClasses from './styles/grid.m.css';
+import Footer from './Footer';
 
 export const GridBase = ThemeableMixin(WidgetBase);
 
@@ -32,7 +33,8 @@ export interface ScrollTo {
  */
 export interface GridProperties extends ThemeableProperties, HasColumns, Partial<HasEstimatedRowHeight>, Partial<HasScrollTo> {
 	registry?: WidgetRegistry;
-	dataProvider: DataProviderBase<any, Options, any>;
+	dataProvider: DataProviderBase<any>;
+	footers?: DNode[];
 }
 
 const gridRegistry = new WidgetRegistry();
@@ -41,6 +43,7 @@ gridRegistry.define('header-cell', HeaderCell);
 gridRegistry.define('body', Body);
 gridRegistry.define('row', Row);
 gridRegistry.define('cell', Cell);
+gridRegistry.define('footer', Footer);
 
 @theme(gridClasses)
 class Grid extends GridBase<GridProperties> {
@@ -94,6 +97,7 @@ class Grid extends GridBase<GridProperties> {
 			properties: {
 				theme,
 				columns,
+				footers = [],
 				dataProvider,
 				scrollTo = this.scrollTo,
 				estimatedRowHeight = 20
@@ -127,7 +131,11 @@ class Grid extends GridBase<GridProperties> {
 				scrollTo,
 				onScrollToComplete: this.onScrollToComplete,
 				onScrollToRequest: this.onScrollToRequest
-			})
+			}),
+			w<Footer>('footer', {
+				registry,
+				theme
+			}, footers)
 		]);
 	}
 }

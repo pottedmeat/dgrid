@@ -1,90 +1,85 @@
 import { Observable, Observer } from '@dojo/core/Observable';
-import { SortDetails, DataProperties, SliceDetails } from '../interfaces';
+import { SortDetails, DataProperties, SliceDetails, ItemProperties, Constructor } from '../interfaces';
+
+export interface DataProviderOptions {
+}
 
 export interface DataProviderConfiguration {
 	slice?: SliceDetails;
 	sort?: SortDetails | SortDetails[];
 }
 
-export interface Options {
-	[option: string]: any;
-	configuration?: DataProviderConfiguration;
-}
-
-export interface DataProviderState<O extends Options> {
-	options: O;
+export interface DataProviderState {
 	slice?: SliceDetails;
 	sort?: SortDetails[];
 }
 
-/**
- * T: Data type
- * O: Options passed to the constructor
- */
-class DataProviderBase<P extends DataProperties<any>, O extends Options, S extends DataProviderState<O>> {
-	private _data: P;
-	private _state: S;
-	private _observable: Observable<P>;
-	private _observers: Observer<P>[];
+abstract class DataProviderBase<T, O extends DataProviderOptions = DataProviderOptions, C extends DataProviderConfiguration = DataProviderConfiguration, S extends DataProviderState = DataProviderState, D extends DataProperties<T> = DataProperties<T>, I extends ItemProperties<T> = ItemProperties<T>> {
+	private _observable: Observable<D>;
+	private _observers: Observer<D>[] = [];
 
-	constructor(options: O) {
-		const {
-			configuration: {
-				slice = undefined,
-				sort = []
-			} = {}
-		} = options;
-		this._state = <S> {
-			options: options || {},
-			slice,
-			sort: Array.isArray(sort) ? sort : [ sort ]
-		};
-		this._observable = new Observable((observer: Observer<P>) => {
+	protected data: D;
+	protected options: O;
+	protected state: S = <S> {};
+
+	constructor(options: O, configuration?: C) {
+		this.options = options;
+		if (configuration) {
+			this.configure(configuration, false);
+		}
+
+		this._observable = new Observable((observer: Observer<D>) => {
 			this._observers.push(observer);
-			if (this._data) {
-				observer.next(this._data);
+			if (this.data) {
+				observer.next(this.data);
 			}
+			return () => {
+				const index = this._observers.indexOf(observer);
+				if (index > -1) {
+					this._observers.slice(index, 1);
+				}
+			};
 		});
-		this._observers = [];
 	}
 
-	protected __state__(): S {
-		return this._state;
+	/**
+	 * Use options and state to update data
+	 */
+	protected buildData(): void {}
+
+	configure({ slice, sort = [] }: C, updateData = true) {
+		this.state.slice = slice;
+		if (sort) {
+			this.state.sort = Array.isArray(sort) ? sort : [ sort ];
+		}
+		if (updateData) {
+			this.updateData();
+		}
 	}
 
-	buildData(state: S): P {
-		return <any> { items: [] };
-	}
-
-	configure({ slice, sort = [] }: DataProviderConfiguration) {
-		this._state.slice = slice;
-		this._state.sort = Array.isArray(sort) ? sort : [ sort ];
-		this.updateData();
-	}
-
-	observe(): Observable<P> {
+	observe(): Observable<D> {
 		return this._observable;
 	}
 
-	protected processData(data: P): P {
-		return data;
-	}
-
 	slice(slice: SliceDetails) {
-		this._state.slice = slice;
+		this.state.slice = slice;
 		this.updateData();
 	}
 
 	sort(sort: SortDetails | SortDetails[]) {
-		this._state.sort = (Array.isArray(sort) ? sort : [ sort ]).map((sortDetail) => {
+		this.state.sort = (Array.isArray(sort) ? sort : [ sort ]).map((sortDetail) => {
 			sortDetail.descending = Boolean(sortDetail.descending);
 			return sortDetail;
 		});
 		this.updateData();
 	}
 
+	protected processData(): void {}
+
 	protected updateData(): void {
-		const data = this._data = this.processData(this.buildData(this._state));
+		this.buildData();
+		this.processData();
+		const data = this.data;
 		this._observers.forEach((observer) => {
 			observer.next(data);
 		});

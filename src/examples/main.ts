@@ -6,7 +6,8 @@ import { WidgetProperties } from '@dojo/widget-core/interfaces';
 import { w } from '@dojo/widget-core/d';
 import { GridProperties } from '../Grid';
 import { HasScrollTo } from '../interfaces';
-import { PaginationDataProviderMixin } from '../GridPagination';
+import { PaginationDataProviderMixin, GridPagination } from '../GridPagination';
+import Pagination from '../Pagination';
 
 const data = [
 	{ order: 1, name: 'preheat', description: 'Preheat your oven to 350F' },
@@ -27,7 +28,9 @@ for (let i = 1; i <= 10000; i++) {
 	instructions.push(instruction);
 }
 
-const dataProvider = new (PaginationDataProviderMixin(ArrayDataProvider))({
+const PaginatedDateProvider = PaginationDataProviderMixin(ArrayDataProvider);
+
+const dataProvider = new PaginatedDateProvider<string>({
 	idProperty: 'order',
 	data: instructions
 });
@@ -50,6 +53,7 @@ const columns = [
 const properties: GridProperties & HasScrollTo = {
 	dataProvider,
 	columns,
+	footers: [ w(GridPagination, { dataProvider, itemsPerPage: 10, paginationConstructor: Pagination }) ],
 	onScrollToComplete() {
 		delete properties.scrollTo;
 	}
@@ -66,10 +70,3 @@ class Projector extends ProjectorBase<WidgetProperties> {
 const projector = new Projector();
 
 projector.append();
-
-setTimeout(function(){
-	properties.scrollTo = {
-		index: 4321
-	};
-	projector.invalidate();
-}, 500);

@@ -153,9 +153,8 @@ class Body extends BodyBase<BodyProperties> {
 			properties: {
 				size: {
 					start = 0,
-					totalLength = items.length,
 					min = 0,
-					max: _max = -1
+					max = Infinity
 				} = {},
 				onScrollToRequest,
 				onSliceRequest
@@ -163,8 +162,6 @@ class Body extends BodyBase<BodyProperties> {
 			scroller,
 			visibleKeys
 		} = this;
-		const max = (_max !== -1) ? _max : (totalLength - 1);
-		console.log('min:', min, 'max:', max);
 
 		if (visibleKeys.length === 0) {
 			// This happens during a very rapid scroll
@@ -253,11 +250,13 @@ class Body extends BodyBase<BodyProperties> {
 			const {
 				properties: {
 					size: {
-						start = 0
+						start = 0,
+						max: _max = -1
 					} = {},
 					onSliceRequest
 				}
 			} = this;
+			const max = (_max !== -1) ? _max : Infinity;
 
 			this.scroller = element;
 
@@ -265,8 +264,18 @@ class Body extends BodyBase<BodyProperties> {
 				// If there has been no data passed (e.g. during initialization)
 				// wait until the scroll area appears to get a more accurate
 				// estimate of how many rows to ask for initially
-				console.log('empty items slice', start, this.estimatedRowCount());
-				onSliceRequest && onSliceRequest({ start: start, count: this.estimatedRowCount() });
+				const sliceStart = start;
+				let sliceCount = this.estimatedRowCount();
+				// Use the start value we found and request an amount of data
+				// equal to the additional data above the scroll area, the number
+				// of visible rows and the additional data below the scroll area
+				if (sliceStart + sliceCount - 1 > max) {
+					// If we've reached the data limit
+					// only ask for as many rows as are left
+					sliceCount = (max - sliceStart + 1);
+				}
+				console.log('empty items slice', sliceStart, sliceCount);
+				onSliceRequest && onSliceRequest({ start: sliceStart, count: sliceCount });
 			}
 			else {
 				// We hit this when the children of the scroll area change
@@ -478,11 +487,10 @@ class Body extends BodyBase<BodyProperties> {
 					start = 0,
 					totalLength = items.length,
 					min = 0,
-					max: _max = -1
+					max = Infinity
 				} = {}
 			}
 		} = this;
-		const max = (_max !== -1) ? _max : (totalLength - 1);
 
 		const children: DNode[] = [];
 

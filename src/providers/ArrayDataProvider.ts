@@ -1,7 +1,7 @@
-import DataProviderBase, { Options, DataProviderState } from '../bases/DataProviderBase';
-import { ItemProperties, DataProperties } from '../interfaces';
+import DataProviderBase, { DataProviderOptions } from '../bases/DataProviderBase';
+import { ItemProperties } from '../interfaces';
 
-export interface ArrayDataProviderOptions<T> extends Options {
+export interface ArrayDataProviderOptions<T> extends DataProviderOptions {
 	idProperty?: string;
 	data: T[];
 }
@@ -18,36 +18,39 @@ function expand(items: any[], idProperty: string, index = 0, array = <ItemProper
 	return array;
 }
 
-class ArrayDataProvider<T> extends DataProviderBase<DataProperties<T>, ArrayDataProviderOptions<T>, DataProviderState<ArrayDataProviderOptions<T>>> {
-	buildData(state: DataProviderState<ArrayDataProviderOptions<T>>): DataProperties<T> {
+class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<T>> {
+	protected buildData() {
 		const {
 			options: {
 				idProperty = 'id',
 				data = []
 			},
-			slice,
-			sort = []
-		} = state;
+			state: {
+				slice,
+				sort
+			}
+		} = this;
+
 		let items = data;
-		if (sort.length) {
-			items = items.sort((a: any, b: any) => {
+		if (sort && sort.length) {
+			items = [ ...items].sort((a: any, b: any) => {
 				for (let field of sort) {
 					const aValue = a[field.columnId];
 					const bValue = b[field.columnId];
-					const descending = field.descending;
+					const ascending = !field.descending;
 					if (aValue !== bValue) {
-						if (descending) {
-							return (aValue > bValue ? -1 : 1);
+						if (ascending) {
+							return (aValue < bValue ? -1 : 1);
 						}
 						else {
-							return (aValue < bValue ? -1 : 1);
+							return (aValue > bValue ? -1 : 1);
 						}
 					}
 				}
 				return 0;
 			});
 		}
-		const built: DataProperties<T> = {
+		const built: ArrayDataProvider<T>['data'] = {
 			sort,
 			items: expand(items, idProperty),
 			size: {
@@ -59,7 +62,7 @@ class ArrayDataProvider<T> extends DataProviderBase<DataProperties<T>, ArrayData
 			built.items = built.items.slice(slice.start, slice.start + slice.count);
 			built.size && (built.size.start = slice.start);
 		}
-		return built;
+		this.data = built;
 	}
 }
 
