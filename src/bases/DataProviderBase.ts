@@ -14,13 +14,13 @@ export interface DataProviderState {
 	sort?: SortDetails[];
 }
 
-abstract class DataProviderBase<T, O extends DataProviderOptions = DataProviderOptions, C extends DataProviderConfiguration = DataProviderConfiguration, S extends DataProviderState = DataProviderState, D extends DataProperties<T> = DataProperties<T>, I extends ItemProperties<T> = ItemProperties<T>> {
-	private _observable: Observable<D>;
-	private _observers: Observer<D>[] = [];
+abstract class DataProviderBase<T = any, O extends DataProviderOptions = DataProviderOptions, C extends DataProviderConfiguration = DataProviderConfiguration> {
+	private _observable: Observable<DataProperties<T>>;
+	private _observers: Observer<DataProperties<T>>[] = [];
 
-	protected data: D;
+	protected data: DataProperties<T>;
 	protected options: O;
-	protected state: S = <S> {};
+	protected state: DataProviderState = <DataProviderState> {};
 
 	constructor(options: O, configuration?: C) {
 		this.options = options;
@@ -28,7 +28,7 @@ abstract class DataProviderBase<T, O extends DataProviderOptions = DataProviderO
 			this.configure(configuration, false);
 		}
 
-		this._observable = new Observable((observer: Observer<D>) => {
+		this._observable = new Observable((observer: Observer<DataProperties<T>>) => {
 			this._observers.push(observer);
 			if (this.data) {
 				observer.next(this.data);
@@ -57,7 +57,7 @@ abstract class DataProviderBase<T, O extends DataProviderOptions = DataProviderO
 		}
 	}
 
-	observe(): Observable<D> {
+	observe(): Observable<DataProperties<T>> {
 		return this._observable;
 	}
 
