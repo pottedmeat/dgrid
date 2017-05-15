@@ -36,7 +36,7 @@ class PageLink extends PageLinkBase<PageLinkProperties> {
 
 		return v('span', {
 			classes: this.classes(css.pageLink, disabled ? css.disabled : null, isArrow ? css.arrow : null),
-			// ...onclick,
+			...onclick,
 			tabindex: disabled ? '-1' : '0'
 		}, [ label ]);
 	}
