@@ -5,13 +5,13 @@ import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mi
 import WidgetBase from '@dojo/widget-core/WidgetBase';
 import { DNode } from '@dojo/widget-core/interfaces';
 import Cell from './Cell';
-import { HasColumns, ItemProperties } from './interfaces';
+import { HasColumns, HasToggleExpandedEvent, ItemProperties } from './interfaces';
 
 import * as rowClasses from './styles/row.m.css';
 
 export const RowBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
-export interface RowProperties extends WidgetProperties, HasColumns, RegistryMixinProperties, ThemeableProperties {
+export interface RowProperties extends WidgetProperties, HasColumns, HasToggleExpandedEvent, RegistryMixinProperties, ThemeableProperties {
 	item: ItemProperties<any>;
 }
 
@@ -22,7 +22,8 @@ class Row extends RowBase<RowProperties> {
 			properties: {
 				item,
 				columns = [],
-				registry = dRegistry
+				registry = dRegistry,
+				onToggleExpandedRequest
 			}
 		} = this;
 
@@ -38,7 +39,8 @@ class Row extends RowBase<RowProperties> {
 					key: id,
 					column,
 					item,
-					value: item.data[ field || id ]
+					value: item.data[ field || id ],
+					onToggleExpandedRequest
 				});
 			}))
 		]);

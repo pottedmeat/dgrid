@@ -8,7 +8,7 @@ import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import 'intersection-observer';
 import {
 	HasColumns, HasItems, HasSliceEvent, HasSize, ItemProperties,
-	HasScrollTo, HasEstimatedRowHeight
+	HasScrollTo, HasEstimatedRowHeight, HasToggleExpandedEvent
 } from './interfaces';
 import { ScrollTo } from './Grid';
 import Row from './Row';
@@ -26,7 +26,7 @@ interface RenderedDetails {
 
 export const BodyBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
-export interface BodyProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasItems, HasSize, HasScrollTo, HasSliceEvent, RegistryMixinProperties {
+export interface BodyProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasItems, HasSize, HasScrollTo, HasSliceEvent, HasToggleExpandedEvent, RegistryMixinProperties {
 	onScrollToRequest(scrollTo: ScrollTo): void;
 }
 
@@ -445,7 +445,8 @@ class Body extends BodyBase<BodyProperties> {
 			properties: {
 				columns,
 				theme,
-				registry = dRegistry
+				registry = dRegistry,
+				onToggleExpandedRequest
 			}
 		} = this;
 
@@ -473,7 +474,8 @@ class Body extends BodyBase<BodyProperties> {
 				item,
 				columns,
 				registry,
-				theme
+				theme,
+				onToggleExpandedRequest
 			})
 		]);
 	}

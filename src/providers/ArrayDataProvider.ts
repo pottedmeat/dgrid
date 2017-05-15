@@ -1,3 +1,4 @@
+import Set from '@dojo/shim/Set';
 import DataProviderBase, { DataProviderOptions } from '../bases/DataProviderBase';
 import { ItemProperties } from '../interfaces';
 
@@ -6,14 +7,54 @@ export interface ArrayDataProviderOptions<T> extends DataProviderOptions {
 	data: T[];
 }
 
-function expand(items: any[], idProperty: string, index = 0, array = <ItemProperties<any>[]> []) {
+function expand(items: any[], idProperty: string, expanded: { [key: string]: any }, until = Infinity, index = 0, array = <ItemProperties<any>[]> [], parents: Set<string> = new Set<string>(), parent: string = '', depth = 0): ItemProperties<any>[] {
+	if (!parents.size) {
+		for (const item of items) {
+			if (item.parent) {
+				parents.add(String(item.parent));
+			}
+		}
+	}
+
 	for (const item of items) {
+		if (array.length >= until) {
+			return array;
+		}
+
 		const id = String(item[idProperty]);
-		array.push({
-			id,
-			index: index++,
-			data: item
-		});
+		const isExpanded = expanded[id];
+		const canExpand = parents.has(id);
+		if (parent) {
+			if (parent === String(item.parent)) {
+				array.push({
+					id,
+					expandedLevel: depth,
+					isExpanded,
+					canExpand,
+					index: index++,
+					data: item
+				});
+				if (isExpanded) {
+					const length = array.length;
+					expand(items, idProperty, expanded, until, index, array, parents, id, depth + 1);
+					index += (array.length - length);
+				}
+			}
+		}
+		else if (!item.parent) {
+			array.push({
+				id,
+				isExpanded,
+				canExpand,
+				index: index++,
+				data: item
+			});
+			if (isExpanded) {
+				const length = array.length;
+				expand(items, idProperty, expanded, until, index, array, parents, id, depth + 1);
+				index += (array.length - length);
+			}
+		}
 	}
 	return array;
 }
@@ -27,7 +68,8 @@ class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<
 			},
 			state: {
 				slice,
-				sort
+				sort,
+				expanded
 			}
 		} = this;
 
@@ -50,19 +92,19 @@ class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<
 				return 0;
 			});
 		}
-		const built: ArrayDataProvider<T>['data'] = {
+		const itemProperties: ArrayDataProvider<T>['data'] = {
 			sort,
-			items: expand(items, idProperty),
+			items: expand(items, idProperty, expanded, slice ? (slice.start + slice.count) : Infinity),
 			size: {
 				start: 0,
 				totalLength: data.length
 			}
 		};
 		if (slice) {
-			built.items = built.items.slice(slice.start, slice.start + slice.count);
-			built.size && (built.size.start = slice.start);
+			itemProperties.items = itemProperties.items.slice(slice.start, slice.start + slice.count);
+			itemProperties.size && (itemProperties.size.start = slice.start);
 		}
-		this.data = built;
+		this.data = itemProperties;
 	}
 }
 

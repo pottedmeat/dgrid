@@ -24,7 +24,56 @@ const data = [
 const instructions: any[] = [];
 for (let i = 1; i <= 10000; i++) {
 	const instruction = Object.create(data[Math.floor(Math.random() * data.length)]);
-	instruction.order = i;
+	const parent = i;
+	if (instruction.order === 2) {
+		instructions.push({
+			order: ++i,
+			name: 'flour',
+			description: '1 cup',
+			parent
+		});
+		instructions.push({
+			order: ++i,
+			name: 'salt',
+			description: '1 teaspoon',
+			parent
+		});
+		instructions.push({
+			order: ++i,
+			name: 'baking soda',
+			description: '1 tablespoon',
+			parent
+		});
+	}
+	else if (instruction.order === 3) {
+		instructions.push({
+			order: ++i,
+			name: 'butter',
+			description: '1/4 cup',
+			parent
+		});
+		instructions.push({
+			order: ++i,
+			name: 'brown sugar',
+			description: '1/4 cup',
+			parent
+		});
+		instructions.push({
+			order: ++i,
+			name: 'white sugar',
+			description: '1/4 cup',
+			parent
+		});
+	}
+	else if (instruction.order === 5) {
+		instructions.push({
+			order: ++i,
+			name: 'chocolate chips',
+			description: '1 cup',
+			parent
+		});
+	}
+	instruction.order = parent;
 	instructions.push(instruction);
 }
 
@@ -38,7 +87,8 @@ const dataProvider = new ArrayDataProvider({
 const columns = [
 	{
 		id: 'order',
-		label: 'step' // give column a custom name
+		label: 'step', // give column a custom name
+		renderExpando: true
 	},
 	{
 		id: 'name'

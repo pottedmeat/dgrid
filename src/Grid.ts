@@ -105,7 +105,8 @@ class Grid extends GridBase<GridProperties> {
 		} = this;
 		const {
 			slice: onSliceRequest,
-			sort: onSortRequest
+			sort: onSortRequest,
+			toggleExpanded: onToggleExpandedRequest
 		} = dataProvider;
 		const registry: WidgetRegistry = <any> this.registries;
 
@@ -130,7 +131,8 @@ class Grid extends GridBase<GridProperties> {
 				onSliceRequest: onSliceRequest && onSliceRequest.bind(dataProvider),
 				scrollTo,
 				onScrollToComplete: this.onScrollToComplete,
-				onScrollToRequest: this.onScrollToRequest
+				onScrollToRequest: this.onScrollToRequest,
+				onToggleExpandedRequest: onToggleExpandedRequest && onToggleExpandedRequest.bind(dataProvider)
 			}),
 			w<Footer>('footer', {
 				registry,

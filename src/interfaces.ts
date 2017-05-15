@@ -21,6 +21,9 @@ export interface ItemProperties<T> {
 	id: string;
 	index: number;
 	data: T;
+	expandedLevel?: number;
+	isExpanded?: boolean;
+	canExpand?: boolean;
 }
 
 export interface SizeDetails {
@@ -47,6 +50,7 @@ export interface Column<T> extends HasCellRenderer<T> {
 	label?: string;
 	field?: string;
 	sortable?: boolean; // default true
+	renderExpando?: boolean;
 }
 
 export interface HasColumns {
@@ -92,6 +96,10 @@ export interface HasValue {
 
 export interface HasSize {
 	size?: SizeDetails;
+}
+
+export interface HasToggleExpandedEvent {
+	onToggleExpandedRequest(item: ItemProperties<object>): void;
 }
 
 export interface HasSliceEvent {

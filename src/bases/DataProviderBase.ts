@@ -12,6 +12,7 @@ export interface DataProviderConfiguration {
 export interface DataProviderState {
 	slice?: SliceDetails;
 	sort?: SortDetails[];
+	expanded: { [key: string]: any };
 }
 
 abstract class DataProviderBase<T = any, O extends DataProviderOptions = DataProviderOptions, C extends DataProviderConfiguration = DataProviderConfiguration> {
@@ -20,7 +21,9 @@ abstract class DataProviderBase<T = any, O extends DataProviderOptions = DataPro
 
 	protected data: DataProperties<T>;
 	protected options: O;
-	protected state: DataProviderState = <DataProviderState> {};
+	protected state: DataProviderState = <DataProviderState> {
+		expanded: {}
+	};
 
 	constructor(options: O, configuration?: C) {
 		this.options = options;
@@ -71,6 +74,12 @@ abstract class DataProviderBase<T = any, O extends DataProviderOptions = DataPro
 			sortDetail.descending = Boolean(sortDetail.descending);
 			return sortDetail;
 		});
+		this.updateData();
+	}
+
+	toggleExpanded(item: ItemProperties<object>) {
+		const expanded = this.state.expanded;
+		expanded[item.id] = !expanded[item.id];
 		this.updateData();
 	}
 
