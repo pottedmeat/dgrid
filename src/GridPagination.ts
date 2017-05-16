@@ -60,7 +60,6 @@ export class GridPagination extends WidgetBase<GridPaginationProperties> {
 		};
 	}
 
-
 	private onPageRequest(page: number) {
 		const {
 			dataProvider,
@@ -88,19 +87,17 @@ export class GridPagination extends WidgetBase<GridPaginationProperties> {
 		else if (data.size) {
 			const items = data.items;
 			const {
+				limit: {
+					start
+				},
 				size: {
-					min = -1,
 					totalLength = items.length
 				} = {}
 			} = data;
 
-			if (min === -1) {
-				throw new Error('Missing size.min in data properties');
-			}
-
-			const page = Math.floor(min / itemsPerPage) + 1;
+			const page = Math.floor(start / itemsPerPage) + 1;
 			const pages = Math.ceil(totalLength / itemsPerPage);
-			const status = `${min + 1} - ${Math.min(min + itemsPerPage, page * itemsPerPage)} of ${totalLength} results`;
+			const status = `${start + 1} - ${Math.min(start + itemsPerPage, page * itemsPerPage)} of ${totalLength} results`;
 			return w<WidgetBaseInterface<PaginationProperties, DNode>>(this.properties.paginationConstructor, {
 				page,
 				pages,
@@ -119,30 +116,11 @@ export function PaginationDataProviderMixin<T extends Constructor<DataProviderBa
 			const state = <GridPaginationDataProviderState> this.state;
 			state.page = slice.page;
 			state.itemsPerPage = slice.itemsPerPage;
-			this.slice({
+			delete state.slice;
+			this.limit({
 				start: (state.page - 1) * state.itemsPerPage,
 				count: state.itemsPerPage
 			});
-		}
-
-		protected processData(): void {
-			super.processData();
-
-			const data = this.data;
-			const itemsLength = data.items.length;
-			if (!data.size) {
-				data.size = {
-					start: 0,
-					totalLength: itemsLength,
-					min: 0,
-					max: (itemsLength - 1)
-				};
-			}
-			else {
-				const start = data.size.start;
-				data.size.min = start;
-				data.size.max = (start + itemsLength - 1);
-			}
 		}
 	};
 }

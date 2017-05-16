@@ -27,16 +27,21 @@ export interface ItemProperties<T> {
 }
 
 export interface SizeDetails {
-	start: number;
+	dataLength: number;
 	totalLength: number;
-	min?: number;
-	max?: number;
+}
+
+export interface LimitDetails {
+	start: number;
+	count: number;
 }
 
 export interface DataProperties<T> {
 	items: ItemProperties<T>[];
-	sort?: SortDetails[];
-	size?: SizeDetails;
+	slice: SliceDetails;
+	sort: SortDetails[];
+	limit: LimitDetails;
+	size: SizeDetails;
 }
 
 export interface CellRendererProperties extends WidgetProperties, HasValue, HasColumn, HasItem, RegistryMixinProperties { }
@@ -94,8 +99,16 @@ export interface HasValue {
 	value: string;
 }
 
+export interface HasLimit {
+	limit: LimitDetails;
+}
+
+export interface HasSlice {
+	slice: SliceDetails;
+}
+
 export interface HasSize {
-	size?: SizeDetails;
+	size: SizeDetails;
 }
 
 export interface HasToggleExpandedEvent {

@@ -77,7 +77,7 @@ for (let i = 1; i <= 10000; i++) {
 	instructions.push(instruction);
 }
 
- const PaginatedDateProvider = PaginationDataProviderMixin(ArrayDataProvider);
+const PaginatedDateProvider = PaginationDataProviderMixin(ArrayDataProvider);
 
 const dataProvider = new PaginatedDateProvider({
 	idProperty: 'order',
@@ -103,7 +103,7 @@ const columns = [
 const properties: GridProperties & HasScrollTo = {
 	dataProvider,
 	columns,
-	footers: [ w(GridPagination, { dataProvider, itemsPerPage: 10, paginationConstructor: Pagination }) ],
+	footers: [ w(GridPagination, { dataProvider, itemsPerPage: 1000, paginationConstructor: Pagination }) ],
 	onScrollToComplete() {
 		delete properties.scrollTo;
 	}

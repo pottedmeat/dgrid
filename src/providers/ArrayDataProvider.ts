@@ -1,6 +1,6 @@
 import Set from '@dojo/shim/Set';
 import DataProviderBase, { DataProviderOptions } from '../bases/DataProviderBase';
-import { ItemProperties } from '../interfaces';
+import { DataProperties, ItemProperties } from '../interfaces';
 
 export interface ArrayDataProviderOptions<T> extends DataProviderOptions {
 	idProperty?: string;
@@ -67,15 +67,16 @@ class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<
 				data = []
 			},
 			state: {
+				limit,
 				slice,
-				sort,
+				sort = [],
 				expanded
 			}
 		} = this;
 
-		let items = data;
+		let items = [ ...data ];
 		if (sort && sort.length) {
-			items = [ ...items].sort((a: any, b: any) => {
+			items = items.sort((a: any, b: any) => {
 				for (let field of sort) {
 					const aValue = a[field.columnId];
 					const bValue = b[field.columnId];
@@ -92,19 +93,38 @@ class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<
 				return 0;
 			});
 		}
-		const itemProperties: ArrayDataProvider<T>['data'] = {
+
+		let itemProperties: ItemProperties<any>[];
+		if (limit) {
+			itemProperties = expand(items, idProperty, expanded, (limit.start + limit.count)).splice(limit.start, (limit.start + limit.count));
+			if (slice) {
+				itemProperties = itemProperties.slice(slice.start, (slice.start + slice.count));
+			}
+		}
+		else {
+			itemProperties = expand(items, idProperty, expanded, slice ? (slice.start + slice.count) : Infinity);
+			if (slice) {
+				itemProperties = itemProperties.slice(slice.start, (slice.start + slice.count));
+			}
+		}
+
+		const dataProperties: DataProperties<any> = {
 			sort,
-			items: expand(items, idProperty, expanded, slice ? (slice.start + slice.count) : Infinity),
+			items: itemProperties,
+			limit: {
+				start: limit ? limit.start : 0,
+				count: limit ? limit.count : data.length
+			},
+			slice: {
+				start: slice ? slice.start : 0,
+				count: slice ? slice.count : data.length
+			},
 			size: {
-				start: 0,
+				dataLength: limit ? limit.count : data.length,
 				totalLength: data.length
 			}
 		};
-		if (slice) {
-			itemProperties.items = itemProperties.items.slice(slice.start, slice.start + slice.count);
-			itemProperties.size && (itemProperties.size.start = slice.start);
-		}
-		this.data = itemProperties;
+		this.data = dataProperties;
 	}
 }
 

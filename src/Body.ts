@@ -8,7 +8,7 @@ import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
 import 'intersection-observer';
 import {
 	HasColumns, HasItems, HasSliceEvent, HasSize, ItemProperties,
-	HasScrollTo, HasEstimatedRowHeight, HasToggleExpandedEvent
+	HasScrollTo, HasEstimatedRowHeight, HasToggleExpandedEvent, HasSlice
 } from './interfaces';
 import { ScrollTo } from './Grid';
 import Row from './Row';
@@ -26,7 +26,7 @@ interface RenderedDetails {
 
 export const BodyBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
-export interface BodyProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasItems, HasSize, HasScrollTo, HasSliceEvent, HasToggleExpandedEvent, RegistryMixinProperties {
+export interface BodyProperties extends ThemeableProperties, HasColumns, HasEstimatedRowHeight, HasItems, HasSlice, HasSize, HasScrollTo, HasSliceEvent, HasToggleExpandedEvent, RegistryMixinProperties {
 	onScrollToRequest(scrollTo: ScrollTo): void;
 }
 
@@ -147,21 +147,24 @@ class Body extends BodyBase<BodyProperties> {
 		clearTimeout(this.expectScroll);
 		this.updateIntersectionObserver();
 
-		const items = this.properties.items;
 		const {
 			itemElementMap,
 			properties: {
+				items,
+				slice: {
+					start
+				},
 				size: {
-					start = 0,
-					min = 0,
-					max = Infinity
-				} = {},
+					dataLength
+				},
 				onScrollToRequest,
 				onSliceRequest
 			},
 			scroller,
 			visibleKeys
 		} = this;
+		const min = 0;
+		const max = (dataLength > 0 ? dataLength - 1 : 0);
 
 		if (visibleKeys.length === 0) {
 			// This happens during a very rapid scroll
@@ -246,17 +249,20 @@ class Body extends BodyBase<BodyProperties> {
 			return;
 		}
 		if (key === 'scroller') {
-			const items = this.properties.items;
 			const {
 				properties: {
+					items,
+					slice: {
+						start
+					},
 					size: {
-						start = 0,
-						max: _max = -1
-					} = {},
+						dataLength
+					},
 					onSliceRequest
 				}
 			} = this;
-			const max = (_max !== -1) ? _max : Infinity;
+			const min = 0;
+			const max = (dataLength > 0 ? dataLength - 1 : 0);
 
 			this.scroller = element;
 
@@ -481,18 +487,20 @@ class Body extends BodyBase<BodyProperties> {
 	}
 
 	render(): DNode {
-		const items = this.properties.items;
 		const {
 			itemElementMap,
 			properties: {
+				items,
+				slice: {
+					start
+				},
 				size: {
-					start = 0,
-					totalLength = items.length,
-					min = 0,
-					max = Infinity
-				} = {}
+					dataLength
+				}
 			}
 		} = this;
+		const min = 0;
+		const max = (dataLength > 0 ? dataLength - 1 : 0);
 
 		const children: DNode[] = [];
 

@@ -1,5 +1,5 @@
 import { Observable, Observer } from '@dojo/core/Observable';
-import { SortDetails, DataProperties, SliceDetails, ItemProperties, Constructor } from '../interfaces';
+import { SortDetails, DataProperties, SliceDetails, ItemProperties, Constructor, LimitDetails } from '../interfaces';
 
 export interface DataProviderOptions {
 }
@@ -10,6 +10,7 @@ export interface DataProviderConfiguration {
 }
 
 export interface DataProviderState {
+	limit?: LimitDetails;
 	slice?: SliceDetails;
 	sort?: SortDetails[];
 	expanded: { [key: string]: any };
@@ -69,6 +70,11 @@ abstract class DataProviderBase<T = any, O extends DataProviderOptions = DataPro
 		this.updateData();
 	}
 
+	limit(limit: LimitDetails) {
+		this.state.limit = limit;
+		this.updateData();
+	}
+
 	sort(sort: SortDetails | SortDetails[]) {
 		this.state.sort = (Array.isArray(sort) ? sort : [ sort ]).map((sortDetail) => {
 			sortDetail.descending = Boolean(sortDetail.descending);
@@ -83,11 +89,8 @@ abstract class DataProviderBase<T = any, O extends DataProviderOptions = DataPro
 		this.updateData();
 	}
 
-	protected processData(): void {}
-
 	protected updateData(): void {
 		this.buildData();
-		this.processData();
 		const data = this.data;
 		this._observers.forEach((observer) => {
 			observer.next(data);

@@ -1,3 +1,4 @@
+import { includes } from '@dojo/shim/array';
 import { v } from '@dojo/widget-core/d';
 import { DNode } from '@dojo/widget-core/interfaces';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
@@ -32,7 +33,7 @@ class PageLink extends PageLinkBase<PageLinkProperties> {
 			isArrow = false,
 			label = String(this.properties.page)
 		} = this.properties;
-		const onclick = disabled ? {} : { onclick: this.onClick };
+		const onclick = { onclick: this.onClick };
 
 		return v('span', {
 			classes: this.classes(css.pageLink, disabled ? css.disabled : null, isArrow ? css.arrow : null),

@@ -87,13 +87,13 @@ class Grid extends GridBase<GridProperties> {
 		};
 	}
 
-
 	render() {
 		const {
 			data: {
 				items = [],
 				sort = [],
-				size
+				size = { dataLength: 0, totalLength: 0 },
+				slice = { start: 0, count: 0 }
 			} = <DataProperties<any>> {},
 			properties: {
 				theme,
@@ -129,6 +129,7 @@ class Grid extends GridBase<GridProperties> {
 				estimatedRowHeight,
 				items,
 				size,
+				slice,
 				onSliceRequest: onSliceRequest && onSliceRequest.bind(dataProvider),
 				scrollTo,
 				onScrollToComplete: this.onScrollToComplete,
