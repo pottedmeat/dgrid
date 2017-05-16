@@ -1,9 +1,7 @@
-import { Observable } from '@dojo/core/Observable';
-import { includes } from '@dojo/shim/array';
 import { Subscription } from '@dojo/shim/Observable';
 import { w } from '@dojo/widget-core/d';
-import WidgetBase, { diffProperty, onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
-import { DNode, PropertyChangeRecord, PropertiesChangeEvent, WidgetBaseConstructor, WidgetBaseInterface, WidgetProperties } from '@dojo/widget-core/interfaces';
+import WidgetBase, { diffProperty } from '@dojo/widget-core/WidgetBase';
+import { DNode, PropertyChangeRecord, WidgetBaseConstructor, WidgetBaseInterface, WidgetProperties } from '@dojo/widget-core/interfaces';
 import DataProviderBase, { DataProviderState } from './bases/DataProviderBase';
 import { SlicePageDetails, Constructor } from './interfaces';
 import { PaginationProperties } from './Pagination';
@@ -23,7 +21,7 @@ export interface HasGridPaginationPage {
 }
 
 export interface GridPaginationProperties extends WidgetProperties, Partial<HasGridPaginationPage> {
-	dataProvider: GridPaginationDataProvider<any>;
+	dataProvider: GridPaginationDataProvider<object>;
 	itemsPerPage: number;
 	paginationConstructor: WidgetBaseConstructor<PaginationProperties> | string;
 }
@@ -39,28 +37,29 @@ export class GridPagination extends WidgetBase<GridPaginationProperties> {
 		}
 
 		return {
-			changed: false,
+			changed: (previousPage !== undefined),
 			value: undefined
 		};
 	}
 
-	@onPropertiesChanged()
-	protected onPropertiesChanged(evt: PropertiesChangeEvent<this, GridPaginationProperties>) {
-		const {
-			dataProvider
-		} = evt.properties;
-
-		if (includes(evt.changedPropertyKeys, 'dataProvider')) {
-			if (this._subscription) {
-				this._subscription.unsubscribe();
-			}
-
+	@diffProperty('dataProvider')
+	protected diffPropertyDataProvider(previousDataProvider: GridPaginationDataProvider<object>, dataProvider: GridPaginationDataProvider<object>): PropertyChangeRecord {
+		const changed = (previousDataProvider !== dataProvider);
+		if (changed) {
+			this._subscription && this._subscription.unsubscribe();
 			this._subscription = dataProvider.observe().subscribe((data) => {
-				this._data = data;
-				this.invalidate();
+				this._data = (data || {});
+				// TODO: Remove setTimeout when invalidation loop is adjusted (https://github.com/dojo/widget-core/pull/494/files)
+				setTimeout(this.invalidate.bind(this));
 			});
 		}
+
+		return {
+			changed,
+			value: dataProvider
+		};
 	}
+
 
 	private onPageRequest(page: number) {
 		const {

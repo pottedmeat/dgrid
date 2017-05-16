@@ -2,9 +2,9 @@ import { includes } from '@dojo/shim/array';
 import { Subscription } from '@dojo/shim/Observable';
 import { v, w } from '@dojo/widget-core/d';
 import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
-import { DNode, PropertiesChangeEvent } from '@dojo/widget-core/interfaces';
+import { DNode, PropertyChangeRecord } from '@dojo/widget-core/interfaces';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
-import WidgetBase, { onPropertiesChanged } from '@dojo/widget-core/WidgetBase';
+import WidgetBase, { diffProperty } from '@dojo/widget-core/WidgetBase';
 import DataProviderBase from './bases/DataProviderBase';
 import Body from './Body';
 import Cell from './Cell';
@@ -69,23 +69,24 @@ class Grid extends GridBase<GridProperties> {
 		onScrollToComplete && onScrollToComplete();
 	}
 
-	@onPropertiesChanged()
-	protected onPropertiesChanged(evt: PropertiesChangeEvent<this, GridProperties>) {
-		const {
-			dataProvider
-		} = evt.properties;
-
-		if (includes(evt.changedPropertyKeys, 'dataProvider')) {
-			if (this.subscription) {
-				this.subscription.unsubscribe();
-			}
-
+	@diffProperty('dataProvider')
+	protected diffPropertyDataProvider(previousDataProvider: DataProviderBase, dataProvider: DataProviderBase): PropertyChangeRecord {
+		const changed = (previousDataProvider !== dataProvider);
+		if (changed) {
+			this.subscription && this.subscription.unsubscribe();
 			this.subscription = dataProvider.observe().subscribe((data) => {
-				this.data = data;
-				this.invalidate();
+				this.data = (data || {});
+				// TODO: Remove setTimeout when invalidation loop is adjusted (https://github.com/dojo/widget-core/pull/494/files)
+				setTimeout(this.invalidate.bind(this));
 			});
 		}
+
+		return {
+			changed,
+			value: dataProvider
+		};
 	}
+
 
 	render() {
 		const {
