@@ -103,7 +103,7 @@ const columns = [
 const properties: GridProperties & HasScrollTo = {
 	dataProvider,
 	columns,
-	footers: [ w(GridPagination, { dataProvider, itemsPerPage: 1000, paginationConstructor: Pagination }) ],
+	footers: [ w(GridPagination, { dataProvider, itemsPerPage: 10, paginationConstructor: Pagination }) ],
 	onScrollToComplete() {
 		delete properties.scrollTo;
 	}

@@ -94,18 +94,16 @@ class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<
 			});
 		}
 
-		let itemProperties: ItemProperties<any>[];
+		let itemProperties = expand(items, idProperty, expanded);
+		const totalLength = itemProperties.length;
 		if (limit) {
-			itemProperties = expand(items, idProperty, expanded, (limit.start + limit.count)).splice(limit.start, (limit.start + limit.count));
+			itemProperties = itemProperties.splice(limit.start, (limit.start + limit.count));
 			if (slice) {
 				itemProperties = itemProperties.slice(slice.start, (slice.start + slice.count));
 			}
 		}
-		else {
-			itemProperties = expand(items, idProperty, expanded, slice ? (slice.start + slice.count) : Infinity);
-			if (slice) {
-				itemProperties = itemProperties.slice(slice.start, (slice.start + slice.count));
-			}
+		else if (slice) {
+			itemProperties = itemProperties.slice(slice.start, (slice.start + slice.count));
 		}
 
 		const dataProperties: DataProperties<any> = {
@@ -121,7 +119,7 @@ class ArrayDataProvider<T> extends DataProviderBase<T, ArrayDataProviderOptions<
 			},
 			size: {
 				dataLength: limit ? limit.count : data.length,
-				totalLength: data.length
+				totalLength
 			}
 		};
 		this.data = dataProperties;

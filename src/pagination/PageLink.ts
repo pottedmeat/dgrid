@@ -20,11 +20,12 @@ export interface PageLinkProperties extends ThemeableProperties {
 class PageLink extends PageLinkBase<PageLinkProperties> {
 	onClick (event: any) {
 		const {
+			disabled,
 			onPageRequest,
 			page
 		} = this.properties;
 
-		onPageRequest && onPageRequest(page);
+		!disabled && onPageRequest && onPageRequest(page);
 	}
 
 	render (): DNode {

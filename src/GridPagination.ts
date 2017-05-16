@@ -85,13 +85,13 @@ export class GridPagination extends WidgetBase<GridPaginationProperties> {
 			this.onPageRequest(1);
 		}
 		else if (data.size) {
-			const items = data.items;
 			const {
+				items,
 				limit: {
 					start
 				},
 				size: {
-					totalLength = items.length
+					totalLength = 0
 				} = {}
 			} = data;
 
