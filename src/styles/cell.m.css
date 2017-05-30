@@ -18,11 +18,11 @@
 }
 
 .cellExpandoCollapsed:after {
-    content: '▲';
+    content: '▶';
     display: block;
 }
 
 .cellExpandoExpanded:after {
-    content: '▼';
+    content: '◢';
     display: block;
 }
