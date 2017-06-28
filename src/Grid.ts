@@ -6,9 +6,11 @@ import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mi
 import WidgetBase, { diffProperty } from '@dojo/widget-core/WidgetBase';
 import DataProviderBase from './bases/DataProviderBase';
 import Body from './Body';
+import ColumnHeaders from './ColumnHeaders';
+import Footer from './Footer';
 import GridRegistry, { gridRegistry } from './GridRegistry';
-import Header from './Header';
-import {  DataProperties, HasBufferRows,  HasColumns, HasScrollTo, ScrollToDetails, SliceRequestListener,  SortRequestListener } from './interfaces';
+import Header, { HeaderType } from './Header';
+import {  DataProperties, HasBufferRows,  HasColumns, HasScrollTo, ScrollToDetails, SliceRequestListener, SortRequestListener } from './interfaces';
 
 import * as css from './styles/grid.m.css';
 
@@ -25,6 +27,8 @@ export const GridBase = ThemeableMixin(RegistryMixin(WidgetBase));
 export interface GridProperties extends ThemeableProperties, HasBufferRows, HasColumns, HasScrollTo {
 	dataProvider: DataProviderBase;
 	registry?: GridRegistry;
+	footers?: (HeaderType | DNode)[];
+	headers?: (HeaderType | DNode)[];
 }
 
 @theme(css)
@@ -74,6 +78,30 @@ class Grid extends GridBase<GridProperties> {
 		onScrollToComplete && onScrollToComplete(scrollTo);
 	}
 
+	protected inflateHeaderTypes(nodes: (HeaderType | DNode)[]): DNode[] {
+		const {
+			_data: {
+				sort: sortDetails = []
+			},
+			_sortRequestListener: onSortRequest,
+			properties: {
+				columns,
+				theme,
+				registry = gridRegistry
+			}
+		} = this;
+
+		return nodes.map((child) => {
+			return (child === HeaderType.COLUMN_HEADERS) ? w<ColumnHeaders>('column-headers', {
+				columns,
+				registry,
+				sortDetails,
+				theme,
+				onSortRequest
+			}) : <DNode> child;
+		});
+	}
+
 	render(): DNode {
 		const {
 			_data: {
@@ -89,6 +117,8 @@ class Grid extends GridBase<GridProperties> {
 			properties: {
 				bufferRows,
 				columns,
+				footers = [],
+				headers = [ HeaderType.COLUMN_HEADERS ],
 				theme,
 				registry = gridRegistry,
 				rowDrift,
@@ -101,12 +131,9 @@ class Grid extends GridBase<GridProperties> {
 			role: 'grid'
 		}, [
 			w<Header>('header', {
-				columns,
 				registry,
-				sortDetails,
-				theme,
-				onSortRequest
-			}),
+				theme
+			}, this.inflateHeaderTypes(headers)),
 			w<Body>('body', {
 				bufferRows,
 				columns,
@@ -120,7 +147,11 @@ class Grid extends GridBase<GridProperties> {
 				slice,
 				rowDrift,
 				theme
-			})
+			}),
+			w<Footer>('footer', {
+				registry,
+				theme
+			}, this.inflateHeaderTypes(footers))
 		]);
 	}
 }
