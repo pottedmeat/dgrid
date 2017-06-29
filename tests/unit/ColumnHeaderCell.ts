@@ -206,7 +206,7 @@ registerSuite({
 			classes: widget.classes(cellCss.cell, css.columnHeaderCell, css.sortable)
 		});
 
-		properties.sortDetail = { ...properties.sortDetail, direction: 'desc' };
+		properties.sortDetail = { columnId: '', ...properties.sortDetail, direction: 'desc' };
 		widget.setProperties(properties);
 
 		widget.expectRender(expected);

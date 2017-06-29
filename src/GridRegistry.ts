@@ -1,5 +1,6 @@
-import { WidgetBaseConstructor } from '@dojo/widget-core/interfaces';
-import WidgetRegistry from '@dojo/widget-core/WidgetRegistry';
+import Promise from '@dojo/shim/Promise';
+import { Constructor, WidgetBaseInterface, WidgetProperties } from '@dojo/widget-core/interfaces';
+import WidgetRegistry, { WidgetRegistryItem } from '@dojo/widget-core/WidgetRegistry';
 import Body, { BodyProperties } from './Body';
 import Cell, { CellProperties } from './Cell';
 import ColumnHeaderCell, { ColumnHeaderCellProperties } from './ColumnHeaderCell';
@@ -11,16 +12,16 @@ import Pagination, { PaginationProperties } from './Pagination';
 import Row, { RowProperties } from './Row';
 
 export interface GridRegistered {
-	[key: string]: WidgetBaseConstructor;
-	body: WidgetBaseConstructor<BodyProperties>;
-	cell: WidgetBaseConstructor<CellProperties>;
-	'column-header-cell': WidgetBaseConstructor<ColumnHeaderCellProperties>;
-	'column-headers': WidgetBaseConstructor<ColumnHeadersProperties>;
-	footer: WidgetBaseConstructor<FooterProperties>;
-	header: WidgetBaseConstructor<HeaderProperties>;
-	'page-link': WidgetBaseConstructor<PageLinkProperties>;
-	pagination: WidgetBaseConstructor<PaginationProperties>;
-	row: WidgetBaseConstructor<RowProperties>;
+	[key: string]: WidgetBaseInterface;
+	body: WidgetBaseInterface<BodyProperties>;
+	cell: WidgetBaseInterface<CellProperties>;
+	'column-header-cell': WidgetBaseInterface<ColumnHeaderCellProperties>;
+	'column-headers': WidgetBaseInterface<ColumnHeadersProperties>;
+	footer: WidgetBaseInterface<FooterProperties>;
+	header: WidgetBaseInterface<HeaderProperties>;
+	'page-link': WidgetBaseInterface<PageLinkProperties>;
+	pagination: WidgetBaseInterface<PaginationProperties>;
+	row: WidgetBaseInterface<RowProperties>;
 }
 
 export default class GridRegistry<T extends GridRegistered = GridRegistered> extends WidgetRegistry {
@@ -40,12 +41,14 @@ export default class GridRegistry<T extends GridRegistered = GridRegistered> ext
 		super.define('row', Row);
 	}
 
-	define<K extends keyof T>(widgetLabel: K, registryItem: T[K]): void {
+	// define<K extends keyof T>(widgetLabel: K, registryItem: Constructor<T[K]> | Promise<Constructor<T[K]>> | (() => Promise<Constructor<T[K]>>)): void {
+	define<K extends keyof T>(widgetLabel: K, registryItem: WidgetRegistryItem): void {
 		this._overrides.define(widgetLabel, registryItem);
 	}
 
-	get<K extends keyof T>(widgetLabel: K): T[K] {
-		return <WidgetBaseConstructor> this._overrides.get(widgetLabel) || super.get(widgetLabel);
+	// get<K extends keyof T>(widgetLabel: K): Constructor<T[K]> | null {
+	get<K extends keyof T, B extends WidgetBaseInterface = WidgetBaseInterface>(widgetLabel: K): Constructor<B> | null {
+		return this._overrides.get(widgetLabel) || super.get(widgetLabel);
 	}
 
 	has<K extends keyof T>(widgetLabel: K): boolean {

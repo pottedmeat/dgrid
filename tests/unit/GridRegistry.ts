@@ -1,6 +1,7 @@
 import * as registerSuite from 'intern/lib/interfaces/object';
 import { assert } from 'chai';
 
+import { WidgetBaseInterface } from '@dojo/widget-core/interfaces';
 import WidgetBase from '@dojo/widget-core/WidgetBase';
 
 import Body from '../../src/Body';
@@ -26,14 +27,20 @@ registerSuite({
 	},
 
 	'Additional type'() {
-		class Header2 extends WidgetBase<ColumnHeadersProperties> {}
+		interface MoreProperties extends ColumnHeadersProperties {
+			foo: string;
+		}
+
+		class Header2 extends WidgetBase<MoreProperties> {}
 
 		interface MoreRegistered extends GridRegistered {
-			header: typeof Header2;
+			header: WidgetBaseInterface<MoreProperties>;
 		}
 
 		const gridRegistry2 = new GridRegistry<MoreRegistered>();
 		gridRegistry2.define('column-headers', Header2);
-		assert.equal(gridRegistry2.get('column-headers'), Header2);
+		const H2 = gridRegistry2.get('column-headers');
+		assert.equal(H2, Header2);
+		assert.isUndefined(H2 && H2.prototype.properties && H2.prototype.properties.foo); // testing the interface
 	}
 });

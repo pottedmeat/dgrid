@@ -51,7 +51,7 @@ registerSuite({
 			afterUpdate: widget.listener,
 			classes: widget.classes(css.scroller),
 			key: 'scroller',
-			onscroll: widget.listener
+			scrollTop: widget.listener
 		}, [
 			v('div', {
 				afterCreate: widget.listener,

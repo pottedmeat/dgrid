@@ -1,5 +1,6 @@
 import { Subscription } from '@dojo/shim/Observable';
 import { v, w } from '@dojo/widget-core/d';
+import { reference } from '@dojo/widget-core/diff';
 import { DNode, PropertyChangeRecord } from '@dojo/widget-core/interfaces';
 import { RegistryMixin }  from '@dojo/widget-core/mixins/Registry';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
@@ -42,11 +43,11 @@ class Grid extends GridBase<GridProperties> {
 	constructor() {
 		super();
 
-		this.registries.add(gridRegistry);
+		this.getRegistries().add(gridRegistry);
 	}
 
-	@diffProperty('dataProvider')
-	protected diffPropertyDataProvider(previousDataProvider: DataProviderBase, dataProvider: DataProviderBase): PropertyChangeRecord {
+	@diffProperty('dataProvider', reference)
+	protected diffPropertyDataProvider({ dataProvider: previousDataProvider }: { dataProvider: DataProviderBase }, { dataProvider }: { dataProvider: DataProviderBase }): PropertyChangeRecord {
 		const changed = (previousDataProvider !== dataProvider);
 		if (changed) {
 			this._sliceRequestListener = dataProvider.slice.bind(dataProvider);
