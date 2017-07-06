@@ -108,7 +108,7 @@ class Grid extends GridBase<GridProperties> {
 	}
 
 	render(): DNode {
-		console.log('Grid.render');
+		// console.log('Grid.render');
 		const {
 			_data: {
 				items = [],
@@ -132,7 +132,6 @@ class Grid extends GridBase<GridProperties> {
 			}
 		} = this;
 
-		console.log('data', items);
 		return v('div', {
 			classes: this.classes(css.grid),
 			role: 'grid'

@@ -8,10 +8,7 @@ import { Intersection } from '@dojo/widget-core/meta/Intersection';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase, { diffProperty, onMetaInvalidate } from '@dojo/widget-core/WidgetBase';
-import {
-	HasBufferRows, HasColumns, HasItems, HasScrollTo, HasScrollToEvent, HasSize, HasSlice, HasSliceEvent,
-	ItemProperties, ScrollToDetails
-} from './interfaces';
+import { HasBufferRows, HasColumns, HasItems, HasScrollTo, HasScrollToEvent, HasSize, HasSlice, HasSliceEvent, ItemProperties } from './interfaces';
 import Row from './Row';
 
 import * as css from './styles/body.m.css';
@@ -36,8 +33,8 @@ class Body extends BodyBase<BodyProperties> {
 	private _itemElementMap = new Map<string, RenderedDetails>();
 	private static _marginIntersectionOptions = {
 		root: 'scroller',
-		threshold: (new Array(100)).map(function (value, index) {
-			return (1 / (index + 1));
+		threshold: from(new Array(101), (value, index) => {
+			return (index / 100);
 		})
 	};
 	private _marginTop?: RenderedDetails;
@@ -70,7 +67,7 @@ class Body extends BodyBase<BodyProperties> {
 			visibleKeys.length === 0 &&
 			(
 				(intersections.has('marginTop') && intersections.get('marginTop', Body._marginIntersectionOptions)) > 0 ||
-				(intersections.has('marginBottom') && intersections.get('marginBottom', Body._marginIntersectionOptions) > 0
+				(intersections.has('marginBottom') && intersections.get('marginBottom', Body._marginIntersectionOptions)) > 0
 			)
 		) {
 			const scroll = dimensions.get('scroller').scroll.top;
@@ -202,7 +199,7 @@ class Body extends BodyBase<BodyProperties> {
 			}
 		}
 		if (cleared) {
-			console.log('cleared');
+			console.log('all new');
 			scrollTop = dimensions.has('marginTop') ? dimensions.get('marginTop').size.height : 0;
 
 			// mark nodes as having been factored into scroll calculations
@@ -430,7 +427,7 @@ class Body extends BodyBase<BodyProperties> {
 						height: '10000px'
 					}
 				}));
-				intersections.get('marginTop', Body._marginIntersectionOptions;
+				intersections.get('marginTop', Body._marginIntersectionOptions);
 			}
 			else if (marginTop) {
 				if (dimensions.has('marginTop')) {
@@ -488,7 +485,6 @@ class Body extends BodyBase<BodyProperties> {
 				if (addedKeys.length) {
 					keyPatches[previousKeys.length] = addedKeys;
 				}
-				console.log('key patches', keyPatches);
 
 				// If all keys are new, we can start from scratch
 				if (cleared) {
@@ -564,7 +560,7 @@ class Body extends BodyBase<BodyProperties> {
 						height: ('10000px')
 					}
 				}));
-				intersections.get('marginBottom');
+				intersections.get('marginBottom', Body._marginIntersectionOptions);
 			}
 		}
 
@@ -587,7 +583,6 @@ class Body extends BodyBase<BodyProperties> {
 				visible.push(key);
 			}
 		}
-		console.log('visible', visible.join(','));
 		return visible;
 	}
 }
