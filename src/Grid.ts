@@ -1,3 +1,4 @@
+import global from '@dojo/core/global';
 import { Subscription } from '@dojo/shim/Observable';
 import { v, w } from '@dojo/widget-core/d';
 import { reference } from '@dojo/widget-core/diff';
@@ -35,6 +36,7 @@ export interface GridProperties extends ThemeableProperties, HasBufferRows, HasC
 @theme(css)
 class Grid extends GridBase<GridProperties> {
 	private _data: DataProperties<object> = <DataProperties<object>> {};
+	private _invalidating: number;
 	private _scrollTo: ScrollToDetails;
 	private _subscription: Subscription;
 	private _sortRequestListener: SortRequestListener;
@@ -55,8 +57,10 @@ class Grid extends GridBase<GridProperties> {
 
 			this._subscription && this._subscription.unsubscribe();
 			this._subscription = dataProvider.observe().subscribe((data) => {
+				console.log('new data', data);
 				this._data = data;
-				this.invalidate();
+				global.cancelAnimationFrame(this._invalidating);
+				this._invalidating = global.requestAnimationFrame(this.invalidate.bind(this));
 			});
 		}
 
@@ -104,6 +108,7 @@ class Grid extends GridBase<GridProperties> {
 	}
 
 	render(): DNode {
+		console.log('Grid.render');
 		const {
 			_data: {
 				items = [],
@@ -127,6 +132,7 @@ class Grid extends GridBase<GridProperties> {
 			}
 		} = this;
 
+		console.log('data', items);
 		return v('div', {
 			classes: this.classes(css.grid),
 			role: 'grid'

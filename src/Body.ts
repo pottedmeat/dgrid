@@ -7,7 +7,7 @@ import { Dimensions } from '@dojo/widget-core/meta/Dimensions';
 import { Intersection } from '@dojo/widget-core/meta/Intersection';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
-import WidgetBase, { diffProperty } from '@dojo/widget-core/WidgetBase';
+import WidgetBase, { diffProperty, onMetaInvalidate } from '@dojo/widget-core/WidgetBase';
 import {
 	HasBufferRows, HasColumns, HasItems, HasScrollTo, HasScrollToEvent, HasSize, HasSlice, HasSliceEvent,
 	ItemProperties, ScrollToDetails
@@ -30,16 +30,154 @@ interface RenderedDetails {
 @theme(css)
 class Body extends BodyBase<BodyProperties> {
 	private _firstVisibleKey: string;
+	private static _intersectionOptions = {
+		root: 'scroller'
+	};
 	private _itemElementMap = new Map<string, RenderedDetails>();
+	private static _marginIntersectionOptions = {
+		root: 'scroller',
+		threshold: (new Array(100)).map(function (value, index) {
+			return (1 / (index + 1));
+		})
+	};
 	private _marginTop?: RenderedDetails;
 	private _scrollTop = 0;
-	private _sentinels = {
-		before: '',
-		after: ''
-	};
+
+	@onMetaInvalidate(Intersection)
+	protected onIntersectionInvalidate(MetaType: Dimensions | Intersection): void {
+		console.log('onIntersectionInvalidate');
+		const {
+			_itemElementMap: itemElementMap,
+			properties: {
+				items,
+				slice: {
+					start = 0
+				} = {},
+				size: {
+					dataLength
+				},
+				onScrollToRequest
+			}
+		} = this;
+		const dimensions = this.meta(Dimensions);
+		const intersections = this.meta(Intersection);
+		const max = (dataLength > 0 ? dataLength - 1 : 0);
+		const visibleKeys = this.visibleKeys();
+
+		// On a very rapid scroll, the grid may have reached
+		// an area with no rendered rows
+		if (
+			visibleKeys.length === 0 &&
+			(
+				(intersections.has('marginTop') && intersections.get('marginTop', Body._marginIntersectionOptions)) > 0 ||
+				(intersections.has('marginBottom') && intersections.get('marginBottom', Body._marginIntersectionOptions) > 0
+			)
+		) {
+			const scroll = dimensions.get('scroller').scroll.top;
+			console.log('out of bounds', scroll);
+			const detailsEntries = from(itemElementMap.entries());
+			for (const [ itemKey, details ] of detailsEntries) {
+				const offsetTop = dimensions.has(itemKey) ? dimensions.get(itemKey).offset.top : 0;
+				console.log('top', itemKey, offsetTop);
+				if (offsetTop) {
+					const delta = (offsetTop - scroll);
+					if (delta > 0) {
+						// The top of the rendered data is below the current viewport
+						// so we try to guess how many rows were skipped and jump
+						// down to that area
+						const estimatedRowHeight = this.estimatedRowHeight();
+						const index = Math.max(0, (start - Math.round(delta / estimatedRowHeight)));
+						console.log('scrolled down', delta, 'to', index);
+						onScrollToRequest && onScrollToRequest({ index });
+						return;
+					}
+					break;
+				}
+			}
+			for (const [ itemKey, renderedDetails ] of detailsEntries.reverse()) {
+				const itemDimensions = dimensions.has(itemKey) ? dimensions.get(itemKey) : undefined;
+				if (itemDimensions) {
+					console.log('bottom', itemKey, itemDimensions.offset.top + itemDimensions.size.height);
+				}
+				if (itemDimensions && itemDimensions.offset.top && itemDimensions.size.height) {
+					const delta = (scroll - itemDimensions.offset.top - itemDimensions.size.height);
+					if (delta > 0) {
+						// The bottom of the rendered data is above the current viewport
+						// so we try to guess how many rows were skipped and jump
+						// down to that area
+						const estimatedRowHeight = this.estimatedRowHeight();
+						const index = Math.min(max, (start + items.length + Math.round(delta / estimatedRowHeight)));
+						console.log('scrolled up', delta, 'to', index);
+						onScrollToRequest && onScrollToRequest({ index });
+						return;
+					}
+					break;
+				}
+			}
+		}
+		else {
+			// This is the typical path the code will take
+			this._scrollTop = dimensions.get('scroller').scroll.top;
+			this._firstVisibleKey = visibleKeys[0];
+			const details = itemElementMap.get(this._firstVisibleKey);
+			if (details) {
+				const intersections = this.meta(Intersection);
+				if (
+					(intersections.has('marginTop') && intersections.get('marginTop', Body._marginIntersectionOptions) > 0) ||
+					(intersections.has('marginBottom') && intersections.get('marginBottom', Body._marginIntersectionOptions) > 0)
+				) {
+					// we don't know the exact number of visible rows
+					console.log('onIntersect w/margin', this._firstVisibleKey, details.index, this.estimatedRowCount());
+					this._slice(details.index, this.estimatedRowCount());
+				}
+				else {
+					// we know exactly how many rows need to be displayed
+					console.log('onIntersect absolute', this._firstVisibleKey, details.index, visibleKeys.length);
+					this._slice(details.index, visibleKeys.length);
+				}
+			}
+		}
+	}
+
+	private _slice(start: number, count: number) {
+		const {
+			properties: {
+				bufferRows = 10,
+				items,
+				rowDrift = 5,
+				size: {
+					dataLength
+				},
+				slice = { start: 0, count: 0 },
+				onSliceRequest
+			}
+		} = this;
+		const max = (dataLength > 0 ? dataLength - 1 : 0);
+
+		// Use the index of the first row as a starting point
+		// as well as moving back a few rows so there's
+		// additional data above the scroll area
+		const sliceStart = Math.max(0, start - bufferRows);
+		let sliceCount = (Math.min(start, bufferRows) + count + bufferRows);
+		// Use the start value we found and request an amount of data
+		// equal to the additional data above the scroll area, the number
+		// of visible rows and the additional data below the scroll area
+
+		// Limit data requests so that we only ever ask for
+		// a. start/count combinations that differ from what we already have (see c.)
+		// b. a start or end index change that exceeds a limit we're comfortable with
+		// c. the very start or very end of the data even if that limit is not reached
+		const startDelta = Math.abs(sliceStart - slice.start);
+		const countDelta = Math.abs(sliceCount - items.length);
+		const atStart = (start === 0);
+		const atEnd = (start + count) === max;
+		console.log('_slice deltas', startDelta, countDelta);
+		if ((startDelta || countDelta) && (atStart || atEnd || startDelta > rowDrift || countDelta > rowDrift)) {
+			onSliceRequest && onSliceRequest({ start: sliceStart, count: sliceCount });
+		}
+	}
 
 	private _scrollTopCallback(): number {
-		// FROM onElementCreated/Updated
 		const {
 			_firstVisibleKey: firstVisibleKey,
 			_itemElementMap: itemElementMap,
@@ -50,6 +188,7 @@ class Body extends BodyBase<BodyProperties> {
 			}
 		} = this;
 		let scrollTop = this._scrollTop;
+		console.log('_scrollTopCallback', scrollTop);
 
 		const detailsEntries = from(itemElementMap.entries());
 		const dimensions = this.meta(Dimensions);
@@ -63,14 +202,11 @@ class Body extends BodyBase<BodyProperties> {
 			}
 		}
 		if (cleared) {
+			console.log('cleared');
 			scrollTop = dimensions.has('marginTop') ? dimensions.get('marginTop').size.height : 0;
 
-			if (onScrollToComplete && scrollTo) {
-				onScrollToComplete(scrollTo);
-			}
-
 			// mark nodes as having been factored into scroll calculations
-			for (const [ , details] of detailsEntries) {
+			for (const [ , details ] of detailsEntries) {
 				details.add = false;
 			}
 			marginTop && (marginTop.add = false);
@@ -103,8 +239,8 @@ class Body extends BodyBase<BodyProperties> {
 
 			// factor in the addition or removal of the top margin
 			if (marginTop) {
-				if (marginTop.add && dimensions.has('marginTop')) {
-					scrollTop += dimensions.get('marginTop').size.height;
+				if (marginTop.add) {
+					scrollTop += dimensions.has('marginTop') ? dimensions.get('marginTop').size.height : 0;
 					marginTop.add = false;
 				}
 				if (marginTop.remove) {
@@ -114,97 +250,13 @@ class Body extends BodyBase<BodyProperties> {
 			}
 		}
 
+		if (onScrollToComplete && scrollTo) {
+			onScrollToComplete(scrollTo);
+		}
+
+		console.log('_scrollTopCallback calculated', scrollTop);
+
 		return scrollTop;
-	}
-
-	private onScroll() {
-		// FROM SCROLL EVENT
-		const {
-			_itemElementMap: itemElementMap,
-			properties: {
-				bufferRows = 10,
-				items,
-				rowDrift = 5,
-				slice: {
-					start = 0
-				} = {},
-				size: {
-					dataLength
-				},
-				onScrollToRequest,
-				onSliceRequest
-			}
-		} = this;
-		const max = (dataLength > 0 ? dataLength - 1 : 0);
-		const visibleKeys = this.visibleKeys();
-		const dimensions = this.meta(Dimensions);
-
-		// On a very rapid scroll, the grid may have reached
-		// an area with no rendered rows
-		if (visibleKeys.length === 0) {
-			const scroll = dimensions.get('scroller').scroll.top;
-			const detailsEntries = from(itemElementMap.entries());
-			for (const [ itemKey, details ] of detailsEntries) {
-				const offsetTop = dimensions.has(itemKey) ? dimensions.get(itemKey).offset.top : 0;
-				if (offsetTop) {
-					const delta = (offsetTop - scroll);
-					if (delta > 0) {
-						// The top of the rendered data is below the current viewport
-						// so we try to guess how many rows were skipped and jump
-						// down to that area
-						const estimatedRowHeight = this.estimatedRowHeight();
-						const index = Math.max(0, (start - Math.round(delta / estimatedRowHeight)));
-						onScrollToRequest && onScrollToRequest({ index });
-						return;
-					}
-					break;
-				}
-			}
-			for (const [ itemKey, renderedDetails ] of detailsEntries.reverse()) {
-				const itemDimensions = dimensions.get(itemKey);
-				if (dimensions.has(itemKey) && itemDimensions.offset.top && itemDimensions.size.height) {
-					const delta = (scroll - itemDimensions.offset.top - itemDimensions.size.height);
-					if (delta > 0) {
-						// The bottom of the rendered data is above the current viewport
-						// so we try to guess how many rows were skipped and jump
-						// down to that area
-						const estimatedRowHeight = this.estimatedRowHeight();
-						const index = Math.min(max, (start + items.length + Math.round(delta / estimatedRowHeight)));
-						onScrollToRequest && onScrollToRequest({ index });
-						return;
-					}
-					break;
-				}
-			}
-		}
-		else {
-			// This is the typical path the code will take
-			this._scrollTop = dimensions.get('scroller').scroll.top;
-			this._firstVisibleKey = visibleKeys[0];
-			const details = itemElementMap.get(this._firstVisibleKey);
-			if (details) {
-				// Use the index of the first row as a starting point
-				// as well as moving back a few rows so there's
-				// additional data above the scroll area
-				const sliceStart = Math.max(0, details.index - bufferRows);
-				let sliceCount = (Math.min(details.index, bufferRows) + visibleKeys.length + bufferRows);
-				// Use the start value we found and request an amount of data
-				// equal to the additional data above the scroll area, the number
-				// of visible rows and the additional data below the scroll area
-
-				// Limit data requests so that we only ever ask for
-				// a. start/count combinations that differ from what we already have (see c.)
-				// b. a start or end index change that exceeds a limit we're comfortable with
-				// c. the very start or very end of the data even if that limit is not reached
-				const startDelta = Math.abs(sliceStart - start);
-				const countDelta = Math.abs(sliceCount - items.length);
-				const atStart = (sliceStart === 0);
-				const atEnd = (sliceStart + sliceCount) === max;
-				if ((startDelta || countDelta) && (atStart || atEnd || startDelta > rowDrift || countDelta > rowDrift)) {
-					onSliceRequest && onSliceRequest({ start: sliceStart, count: sliceCount });
-				}
-			}
-		}
 	}
 
 	/**
@@ -212,7 +264,7 @@ class Body extends BodyBase<BodyProperties> {
 	 * creates or updates an associated entry in
 	 * the item element map.
 	 */
-	protected createNodeFromItem(item: ItemProperties, index: number) {
+	protected createNodeFromItem(item: ItemProperties, index: number): DNode {
 		const {
 			_itemElementMap: itemElementMap,
 			properties: {
@@ -235,6 +287,8 @@ class Body extends BodyBase<BodyProperties> {
 		else {
 			details.index = index;
 		}
+
+		this.meta(Intersection).get(key, Body._intersectionOptions);
 
 		return v('div', {
 			key
@@ -283,77 +337,35 @@ class Body extends BodyBase<BodyProperties> {
 		return Math.round(rowHeight / rowCount) || 20;
 	}
 
-	/**
-	 * Shared method used by both onElementCreated and
-	 * onElementUpdated to track DOM changes
-	 */
-	protected oldOnElementChange(element: HTMLElement, key: string): void {
-		const {
-			_itemElementMap: itemElementMap,
-			_marginTop: marginTop
-		} = this;
-
-		if (key === 'scroller') {
-			const {
-				properties: {
-					items,
-					slice: {
-						start = 0
-					} = {},
-					onSliceRequest
-				}
-			} = this;
-
-			if (items.length === 0) {
-				// If there has been no data passed (e.g. during initialization),
-				// we wait until the scroll area appears to get a more accurate
-				// estimate of how many rows to ask for initially
-
-				// Use the start value we found and request an amount of data
-				// equal to the additional data above the scroll area, the number
-				// of visible rows and the additional data below the scroll area
-				onSliceRequest && onSliceRequest({ start, count: this.estimatedRowCount() });
-			}
-			else {
-				// We hit this when the children of the scroll area change
-				// e.g. after we guess how many rows we'll need. The onScroll
-				// method will take this information and add additional rows
-				// before and after this content as padding.
-				this.onScroll();
-			}
-
-			return;
-		}
-	}
-
 	@diffProperty('scrollTo', shallow)
-	protected diffScrollTo(previousScrollTo: ScrollToDetails, scrollTo: ScrollToDetails) {
+	protected diffScrollTo({ scrollTo: previousScrollTo }: BodyProperties, { scrollTo }: BodyProperties) {
 		const {
 			_itemElementMap: itemElementMap,
 			properties: {
 				items,
-				onScrollToComplete,
-				onSliceRequest
+				onScrollToComplete
 			}
 		} = this;
 
-		if (items) {
+		if (scrollTo && items) {
 			// the scrollTo property was passed either by the user
 			// or by the grid after a call to onScrollToRequest
 			const dimensions = this.meta(Dimensions);
 			const index = scrollTo.index;
 			for (const item of items) {
-				// we saved the "true" index on all details
+				// we have the "true" index on all details
 				// objects so we can just directly compare
 				if (item.index === index) {
 					if (dimensions.has(item.id)) {
 						// if this exists within the grid, just scroll to it
 						// and allow the event handler to fill in any missing data
 						this._scrollTop = dimensions.get(item.id).offset.top;
+						console.log('get', item.id, this._scrollTop);
 						this.invalidate();
 						// notify the property listener that this is done
 						// to allow it to clear this property
 						onScrollToComplete && onScrollToComplete(scrollTo);
+						return;
 					}
 					break;
 				}
@@ -361,14 +373,15 @@ class Body extends BodyBase<BodyProperties> {
 
 			// this index is not currently rendered so we request a slice
 			// of the data with a number of rows to hopefully fill in the scroll area
-			onSliceRequest && onSliceRequest({ start: index, count: this.estimatedRowCount() });
+			console.log('scrollTo', index, this.estimatedRowCount());
+			this._slice(index, this.estimatedRowCount());
 		}
 	}
 
 	render(): DNode {
+		console.log('Body.render');
 		const {
 			_itemElementMap: itemElementMap,
-			_sentinels: sentinels,
 			properties: {
 				items,
 				onSliceRequest,
@@ -382,6 +395,7 @@ class Body extends BodyBase<BodyProperties> {
 		} = this;
 		const max = (dataLength > 0 ? dataLength - 1 : 0);
 		const dimensions = this.meta(Dimensions);
+		const intersections = this.meta(Intersection);
 
 		const children: DNode[] = [];
 
@@ -393,6 +407,7 @@ class Body extends BodyBase<BodyProperties> {
 			// Use the start value we found and request an amount of data
 			// equal to the additional data above the scroll area, the number
 			// of visible rows and the additional data below the scroll area
+			console.log('render (items.length === 0)', start, this.estimatedRowCount());
 			onSliceRequest && onSliceRequest({ start, count: this.estimatedRowCount() });
 		}
 		else {
@@ -415,6 +430,7 @@ class Body extends BodyBase<BodyProperties> {
 						height: '10000px'
 					}
 				}));
+				intersections.get('marginTop', Body._marginIntersectionOptions;
 			}
 			else if (marginTop) {
 				if (dimensions.has('marginTop')) {
@@ -443,7 +459,7 @@ class Body extends BodyBase<BodyProperties> {
 					const key = item.id;
 					// createNodeFromItem marks this item as having been added
 					// automatically if it didn't exist in the mapping (is new)
-					itemsByKey[ key ] = this.createNodeFromItem(item, (start + index));
+					itemsByKey[key] = this.createNodeFromItem(item, (start + index));
 					return key;
 				});
 
@@ -452,6 +468,8 @@ class Body extends BodyBase<BodyProperties> {
 				let addedKeys: string[] = [];
 				const keyPatches: { [ index: number]: string[] } = {};
 				let previousKeyIndex = 0;
+				console.log('previous', previousKeys.join(','));
+				console.log('current', currentKeys.join(','));
 				for (const currentKey of currentKeys) {
 					const foundAtIndex = previousKeys.indexOf(currentKey, previousKeyIndex);
 					if (foundAtIndex === -1) {
@@ -459,7 +477,7 @@ class Body extends BodyBase<BodyProperties> {
 					}
 					else {
 						if (addedKeys.length) {
-							keyPatches[ previousKeyIndex ] = addedKeys;
+							keyPatches[previousKeyIndex] = addedKeys;
 							addedKeys = [];
 						}
 
@@ -468,11 +486,13 @@ class Body extends BodyBase<BodyProperties> {
 					}
 				}
 				if (addedKeys.length) {
-					keyPatches[ previousKeys.length ] = addedKeys;
+					keyPatches[previousKeys.length] = addedKeys;
 				}
+				console.log('key patches', keyPatches);
 
 				// If all keys are new, we can start from scratch
 				if (cleared) {
+					console.log('cleared');
 					itemElementMap.clear();
 					return this.render();
 				}
@@ -544,24 +564,8 @@ class Body extends BodyBase<BodyProperties> {
 						height: ('10000px')
 					}
 				}));
+				intersections.get('marginBottom');
 			}
-
-			// Step 3: Perform a slice on the data if this render
-			// was caused by a sentinal change
-
-			const intersections = this.meta(Intersection);
-			const options = {
-				root: 'scroller',
-				invalidate: true
-			};
-			if (sentinels.before && intersections.get(sentinels.before) > 0) {
-				// This is placed [buffer] rows above the content
-				console.log('before');
-			}
-			if (sentinels.after && intersections.get(sentinels.after) > 0) {
-				// This is placed [buffer] after the content
-			}
-			// TODO: marginTop/marginBottom should have non-invalidating listeners as well
 		}
 
 		return v('div', {
@@ -573,25 +577,17 @@ class Body extends BodyBase<BodyProperties> {
 
 	protected visibleKeys() {
 		const {
-			_itemElementMap: itemElementMap,
-			_sentinels: sentinels
+			_itemElementMap: itemElementMap
 		} = this;
 
 		const intersections = this.meta(Intersection);
-		const options = {
-			root: 'scroller',
-			invalidate: true
-		};
 		const visible: string[] = [];
 		for (const [ key, details ] of from(itemElementMap.entries())) {
-			options.invalidate = (key === sentinels.before || key === sentinels.after);
-			if (intersections.get(key, options) > 0) {
+			if (intersections.has(key) && intersections.get(key, Body._intersectionOptions) > 0) {
 				visible.push(key);
 			}
-			else if (visible.length) {
-				break;
-			}
 		}
+		console.log('visible', visible.join(','));
 		return visible;
 	}
 }
