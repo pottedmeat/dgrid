@@ -30,7 +30,7 @@ export interface ColumnRenderOptions<T = any, V = string> {
 	value: V;
 }
 
-export interface DataProperties<T> {
+export interface DataProperties<T = any> {
 	items: ItemProperties<T>[];
 	size: SizeDetails;
 	slice?: SliceDetails;
@@ -58,6 +58,10 @@ export interface HasColumn {
 
 export interface HasColumns {
 	columns: Column<any, any>[];
+}
+
+export interface HasData {
+	data: DataProperties;
 }
 
 export interface HasSize {

@@ -1,4 +1,4 @@
-import global from '@dojo/core/global';
+import { assign } from '@dojo/core/lang';
 import { Subscription } from '@dojo/shim/Observable';
 import { v, w } from '@dojo/widget-core/d';
 import { reference } from '@dojo/widget-core/diff';
@@ -35,7 +35,13 @@ export interface GridProperties extends ThemeableProperties, HasBufferRows, HasC
 
 @theme(css)
 class Grid extends GridBase<GridProperties> {
-	private _data: DataProperties<object> = <DataProperties<object>> {};
+	private _data: DataProperties<object> = {
+		items: [],
+		size: {
+			dataLength: 0,
+			totalLength: 0
+		}
+	};
 	private _invalidating: number;
 	private _scrollTo: ScrollToDetails;
 	private _subscription: Subscription;
@@ -57,10 +63,8 @@ class Grid extends GridBase<GridProperties> {
 
 			this._subscription && this._subscription.unsubscribe();
 			this._subscription = dataProvider.observe().subscribe((data) => {
-				console.log('new data', data);
-				this._data = data;
-				global.cancelAnimationFrame(this._invalidating);
-				this._invalidating = global.requestAnimationFrame(this.invalidate.bind(this));
+				assign(this._data, data);
+				this.invalidate();
 			});
 		}
 
@@ -108,14 +112,8 @@ class Grid extends GridBase<GridProperties> {
 	}
 
 	render(): DNode {
-		// console.log('Grid.render');
 		const {
-			_data: {
-				items = [],
-				size = { dataLength: 0, totalLength: 0 },
-				slice,
-				sort: sortDetails = []
-			},
+			_data: data,
 			_sliceRequestListener: onSliceRequest,
 			_sortRequestListener: onSortRequest,
 			onScrollToComplete,
@@ -143,14 +141,12 @@ class Grid extends GridBase<GridProperties> {
 			w<Body>('body', {
 				bufferRows,
 				columns,
-				items,
+				data,
 				onScrollToComplete,
 				onScrollToRequest,
 				onSliceRequest,
 				registry,
 				scrollTo,
-				size,
-				slice,
 				rowDrift,
 				theme
 			}),

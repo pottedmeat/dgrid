@@ -49,6 +49,8 @@ const ProjectorBase = ProjectorMixin(WidgetBase);
 class Projector extends ProjectorBase<WidgetProperties> {
 	render() {
 		return w(Grid, {
+			bufferRows: 50,
+			rowDrift: 40,
 			dataProvider,
 			columns
 		});

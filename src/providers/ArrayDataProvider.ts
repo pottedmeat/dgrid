@@ -55,6 +55,7 @@ class ArrayDataProvider<T = object> extends DataProviderBase<T, ArrayDataProvide
 		let itemProperties = expand(items, idProperty);
 		if (slice) {
 			itemProperties = itemProperties.slice(slice.start, (slice.start + slice.count));
+			slice.count = itemProperties.length;
 		}
 
 		this.data = {

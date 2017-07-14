@@ -37,13 +37,15 @@ registerSuite({
 		};
 		widget.setProperties({
 			columns,
-			items: [ item ],
+			data: {
+				items: [ item ],
+				size: {
+					dataLength: 2,
+					totalLength: 2
+				}
+			},
 			onSliceRequest: widget.listener,
-			registry,
-			size: {
-				dataLength: 2,
-				totalLength: 2
-			}
+			registry
 		});
 
 		widget.expectRender(v('div', {

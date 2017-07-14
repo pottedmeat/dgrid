@@ -128,7 +128,14 @@ registerSuite({
 			w<Body>('body', {
 				bufferRows: undefined,
 				columns,
-				items: itemProperties,
+				data: {
+					items: itemProperties,
+					size: {
+						dataLength: 2,
+						totalLength: 2
+					},
+					slice: undefined
+				},
 				onScrollToComplete: widget.listener,
 				onScrollToRequest: widget.listener,
 				onSliceRequest: widget.listener,
@@ -138,11 +145,6 @@ registerSuite({
 					index: 0,
 					position: 'top'
 				},
-				size: {
-					dataLength: 2,
-					totalLength: 2
-				},
-				slice: undefined,
 				theme: undefined
 			}),
 			w<Footer>('footer', {
@@ -173,18 +175,20 @@ registerSuite({
 			w<Body>('body', {
 				bufferRows: undefined,
 				columns,
-				items: [],
+				data: {
+					items: [],
+					size: {
+						dataLength: 0,
+						totalLength: 0
+					},
+					slice: undefined
+				},
 				onScrollToComplete: widget.listener,
 				onScrollToRequest: widget.listener,
 				onSliceRequest: widget.listener,
 				registry,
 				rowDrift: undefined,
 				scrollTo: undefined,
-				size: {
-					dataLength: 0,
-					totalLength: 0
-				},
-				slice: undefined,
 				theme: undefined
 			}),
 			w<Footer>('footer', {
@@ -225,18 +229,20 @@ registerSuite({
 			w<Body>('body', {
 				bufferRows: undefined,
 				columns,
-				items: [],
+				data: {
+					items: [],
+					size: {
+						dataLength: 0,
+						totalLength: 0
+					},
+					slice: undefined
+				},
 				onScrollToComplete: widget.listener,
 				onScrollToRequest: widget.listener,
 				onSliceRequest: widget.listener,
 				registry,
 				rowDrift: undefined,
 				scrollTo: undefined,
-				size: {
-					dataLength: 0,
-					totalLength: 0
-				},
-				slice: undefined,
 				theme: undefined
 			}),
 			w<Footer>('footer', {
@@ -274,18 +280,20 @@ registerSuite({
 			w<Body>('body', {
 				bufferRows: undefined,
 				columns,
-				items: [],
+				data: {
+					items: [],
+					size: {
+						dataLength: 0,
+						totalLength: 0
+					},
+					slice: undefined
+				},
 				onScrollToComplete: widget.listener,
 				onScrollToRequest: widget.listener,
 				onSliceRequest: widget.listener,
 				registry,
 				rowDrift: undefined,
 				scrollTo: undefined,
-				size: {
-					dataLength: 0,
-					totalLength: 0
-				},
-				slice: undefined,
 				theme: undefined
 			}),
 			w<Footer>('footer', {
@@ -326,18 +334,20 @@ registerSuite({
 			w<Body>('body', {
 				bufferRows: undefined,
 				columns,
-				items: itemProperties,
+				data: {
+					items: itemProperties,
+					size: {
+						dataLength: 2,
+						totalLength: 2
+					},
+					slice: undefined
+				},
 				onScrollToComplete: widget.listener,
 				onScrollToRequest: widget.listener,
 				onSliceRequest: widget.listener,
 				registry,
 				rowDrift: undefined,
 				scrollTo: undefined,
-				size: {
-					dataLength: 2,
-					totalLength: 2
-				},
-				slice: undefined,
 				theme: undefined
 			}),
 			w<Footer>('footer', {
@@ -396,18 +406,20 @@ registerSuite({
 			w<Body>('body', {
 				bufferRows: undefined,
 				columns,
-				items: itemProperties,
+				data: {
+					items: itemProperties,
+					size: {
+						dataLength: 2,
+						totalLength: 2
+					},
+					slice: undefined
+				},
 				onScrollToComplete: widget.listener,
 				onScrollToRequest: widget.listener,
 				onSliceRequest: widget.listener,
 				registry,
 				rowDrift: undefined,
 				scrollTo: undefined,
-				size: {
-					dataLength: 2,
-					totalLength: 2
-				},
-				slice: undefined,
 				theme: undefined
 			}),
 			w<Footer>('footer', {
