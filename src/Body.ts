@@ -56,13 +56,6 @@ class Body extends BodyBase<BodyProperties> {
 		// Use the start value we found and request an amount of data
 		// equal to the additional data above the scroll area, the number
 		// of visible rows and the additional data below the scroll area
-
-		// Limit data requests so that we only ever ask for
-		// a. start/count combinations that differ from what we already have (see c.)
-		// b. a start or end index change that exceeds a limit we're comfortable with
-		// c. the very start or very end of the data even if that limit is not reached
-		const startDelta = Math.abs(sliceStart - slice.start);
-		const countDelta = Math.abs(sliceCount - items.length);
 		const atStart = (start === 0);
 		const atEnd = (start + count) === Math.max(0, dataLength - 1);
 		onSliceRequest && onSliceRequest({ start: sliceStart, count: sliceCount });
