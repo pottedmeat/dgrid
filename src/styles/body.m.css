@@ -2,6 +2,7 @@
     flex-grow: 1;
     overflow-x: hidden;
     overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
     padding-bottom: 0px;
     padding-right: 80px;
     margin-right: -80px;
