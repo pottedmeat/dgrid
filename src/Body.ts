@@ -1,10 +1,11 @@
+import global from '@dojo/core/global';
 import { from, includes } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
 import { v, w } from '@dojo/widget-core/d';
 import { shallow } from '@dojo/widget-core/diff';
 import { DNode } from '@dojo/widget-core/interfaces';
 import { Dimensions } from '@dojo/widget-core/meta/Dimensions';
-import { Intersection, IntersectionWatchType } from '@dojo/widget-core/meta/Intersection';
+import { Intersection, IntersectionMetaCallback, IntersectionMetaObserver, IntersectionMetaEntry } from '@dojo/widget-core/meta/Intersection';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
 import WidgetBase, { diffProperty } from '@dojo/widget-core/WidgetBase';
@@ -19,8 +20,11 @@ export interface BodyProperties extends ThemeableProperties, HasBufferRows, HasC
 
 interface RenderedDetails {
 	add: boolean;
-	index: number;
 	height?: number;
+	index: number;
+	invalidating: boolean;
+	key: string;
+	node: DNode;
 	remove: boolean;
 }
 
@@ -28,21 +32,86 @@ interface RenderedDetails {
 class Body extends BodyBase<BodyProperties> {
 	private _firstVisibleKey: string;
 	private _itemElementMap = new Map<string, RenderedDetails>();
-	private _marginTop?: RenderedDetails;
+	private _intersectionObserver: IntersectionMetaObserver;
 	private _scrollTop = 0;
+
+	private _onIntersection(entries: IntersectionMetaEntry[], observer: IntersectionMetaObserver) {
+		const {
+			_intersectionObserver: intersectionObserver,
+			_itemElementMap: itemElementMap,
+			properties: {
+				data: {
+					items,
+					size: {
+						dataLength
+					},
+					slice: {
+						start = 0,
+						count = 0
+					} = {}
+				},
+				onScrollToRequest
+			}
+		} = this;
+
+		let invalidating = false;
+		for (const entry of entries) {
+			if (entry.intersectionRatio > 0) {
+				const details = this._itemElementMap.get(entry.key);
+				if (details && details.invalidating) {
+					invalidating = true;
+					break;
+				}
+			}
+		}
+		if (invalidating) {
+			let sliced = false;
+			const dimensions = this.meta(Dimensions);
+			const visibleKeys = this.visibleKeys();
+			if (visibleKeys.length) {
+				for (const item of items) {
+					if (includes(visibleKeys, item.id)) {
+						console.log('Body._onIntersection visible', item.id);
+						this._slice(item.index);
+						sliced = true;
+						break;
+					}
+				}
+			}
+			if (!sliced) {
+				// TODO: Use intersectionRatio with a large number of thresholds to find the offset
+				for (const key of visibleKeys) {
+					const match = key.match(/^margin([+\-])(\d+)$/);
+					if (match) {
+						const offset = Math.round((parseInt(match[2], 10) * 100) / this.estimatedRowHeight());
+						if (match[1] === '-') {
+							console.log('Body._onIntersection margin', match[1] + match[2], start - offset);
+							onScrollToRequest && onScrollToRequest({ index: (start - offset) });
+						}
+						else if (match[1] === '+') {
+							console.log('Body._onIntersection margin', match[1] + match[2], start + count + offset);
+							onScrollToRequest && onScrollToRequest({ index: (start + count + offset) });
+						}
+						sliced = true;
+						break;
+					}
+				}
+			}
+			if (!sliced) {
+				console.log('Body._onIntersection not sliced');
+			}
+		}
+	}
 
 	private _slice(start: number) {
 		const {
 			properties: {
 				bufferRows = 10,
 				data: {
-					items,
 					size: {
 						dataLength
-					},
-					slice = { start: 0, count: 0 }
+					}
 				},
-				rowDrift = 5,
 				onSliceRequest
 			}
 		} = this;
@@ -56,8 +125,10 @@ class Body extends BodyBase<BodyProperties> {
 		// Use the start value we found and request an amount of data
 		// equal to the additional data above the scroll area, the number
 		// of visible rows and the additional data below the scroll area
-		const atStart = (start === 0);
-		const atEnd = (start + count) === Math.max(0, dataLength - 1);
+		if (sliceCount > 100) {
+			debugger;
+		}
+		console.log('_slice(' + start + ', ' + count + ') => onSliceRequest(' + sliceStart + ', ' + sliceCount + ')');
 		onSliceRequest && onSliceRequest({ start: sliceStart, count: sliceCount });
 	}
 
@@ -65,70 +136,64 @@ class Body extends BodyBase<BodyProperties> {
 		const {
 			_firstVisibleKey: firstVisibleKey,
 			_itemElementMap: itemElementMap,
-			_marginTop: marginTop,
 			properties: {
-				data: {
-					items = undefined
-				} = {},
 				onScrollToComplete,
 				scrollTo
 			}
 		} = this;
-		let scrollTop = this._scrollTop;
-
 		const detailsEntries = from(itemElementMap.entries());
 		const dimensions = this.meta(Dimensions);
+		let foundScrollTo = false;
+
+		let scrollTop = this._scrollTop;
 
 		// Check to see if all items are new
 		let cleared = true;
-		for (const [ , details] of detailsEntries) {
+		for (const [ itemKey, details] of detailsEntries) {
 			if (!details.add) {
 				cleared = false;
-				break;
+			}
+			if (scrollTo && details.index === scrollTo.index && dimensions.has(itemKey)) {
+				foundScrollTo = true;
+				scrollTop = dimensions.get(itemKey).offset.top;
 			}
 		}
+
 		if (cleared) {
-			scrollTop = dimensions.has('marginTop') ? dimensions.get('marginTop').size.height : 0;
+			console.log('Body._scrollTopCallback cleared');
+			if (!scrollTo) {
+				scrollTop = dimensions.has('marginTop') ? dimensions.get('marginTop').size.height : 0;
+			}
 
 			// mark nodes as having been factored into scroll calculations
 			for (const [ , details ] of detailsEntries) {
 				details.add = false;
 			}
-			marginTop && (marginTop.add = false);
+		}
+		else if (scrollTo && foundScrollTo) {
+			console.log('Body._scrollTo', scrollTop);
+			// mark nodes as having been factored into scroll calculations
+			for (const [ , details ] of detailsEntries) {
+				details.add = false;
+			}
 		}
 		else {
 			const dimensions = this.meta(Dimensions);
 			let beforeVisible = true;
-			let resolved = false;
 			for (const [ itemKey, details ] of detailsEntries) {
 				if (itemKey === firstVisibleKey) {
 					beforeVisible = false;
 				}
 
-				if (!resolved) {
-					if (scrollTo) {
-						// scrollTo was passed either by the user
-						// or by the grid after a call to onScrollToRequest
-						// and should be scrolled to if it exists in DOM
-						if (details.index === scrollTo.index && dimensions.has(itemKey)) {
-							this._scrollTop = dimensions.get(itemKey).offset.top;
-							onScrollToComplete && onScrollToComplete(scrollTo);
-							scrollTop = dimensions.get(itemKey).offset.top;
-							console.log('scrollTo', scrollTop);
-							resolved = true;
-						}
+				if (beforeVisible) {
+					// Track size changed of rows before the first visible row
+					if (details.add && dimensions.has(itemKey)) {
+						// added items increase scrollTop
+						scrollTop += dimensions.get(itemKey).size.height;
 					}
-
-					if (beforeVisible) {
-						// Track size changed of rows before the first visible row
-						if (details.add && dimensions.has(itemKey)) {
-							// added items increase scrollTop
-							scrollTop += dimensions.get(itemKey).size.height;
-						}
-						if (details.remove) {
-							// removed items decrease scrollTop
-							scrollTop -= (details.height || 0);
-						}
+					if (details.remove) {
+						// removed items decrease scrollTop
+						scrollTop -= (details.height || 0);
 					}
 				}
 
@@ -138,25 +203,61 @@ class Body extends BodyBase<BodyProperties> {
 					itemElementMap.delete(itemKey);
 				}
 			}
-
-			// factor in the addition or removal of the top margin
-			if (marginTop) {
-				if (marginTop.add) {
-					scrollTop += dimensions.has('marginTop') ? dimensions.get('marginTop').size.height : 0;
-					marginTop.add = false;
-				}
-				if (marginTop.remove) {
-					scrollTop -= (marginTop.height || 0);
-					delete this._marginTop;
-				}
-			}
 		}
 
 		if (onScrollToComplete && scrollTo) {
-			onScrollToComplete(scrollTo);
+			onScrollToComplete(foundScrollTo ? scrollTo : undefined);
 		}
 
+		console.log('Body._onScrollTopCallback', scrollTop);
+
 		return scrollTop;
+	}
+
+	private _margin(type: '-' | '+', exists: boolean): RenderedDetails[] {
+		const {
+			_intersectionObserver: intersectionObserver,
+			_itemElementMap: itemElementMap
+		} = this;
+
+		const rows: RenderedDetails[] = [];
+
+		const reversed = (type === '-');
+		for (let i = 1; i <= 100; i++) {
+			const key = `margin${type}${reversed ? (101 - i) : i}`;
+			const node = v('div', {
+				key,
+				styles: {
+					height: '100px'
+				}
+			});
+			let details = itemElementMap.get(key);
+			if (exists) {
+				if (!details) {
+					details = {
+						add: true,
+						height: 100,
+						index: -1,
+						invalidating: true,
+						key,
+						node,
+						remove: false
+					};
+					intersectionObserver.subscribe(key);
+				}
+				rows.push(details);
+			}
+			else if (details) {
+				delete details.node;
+				if (!details.remove) {
+					details.remove = true;
+					intersectionObserver.unsubscribe(key);
+				}
+				rows.push(details);
+			}
+		}
+
+		return rows;
 	}
 
 	/**
@@ -164,8 +265,9 @@ class Body extends BodyBase<BodyProperties> {
 	 * creates or updates an associated entry in
 	 * the item element map.
 	 */
-	protected createNodeFromItem(item: ItemProperties): DNode {
+	protected createNodeFromItem(item: ItemProperties): RenderedDetails {
 		const {
+			_intersectionObserver: intersectionObserver,
 			_itemElementMap: itemElementMap,
 			properties: {
 				columns,
@@ -178,20 +280,7 @@ class Body extends BodyBase<BodyProperties> {
 			id: key,
 			index
 		} = item;
-		let details = itemElementMap.get(key);
-		if (!details) {
-			details = {
-				add: true,
-				remove: false,
-				index: index
-			};
-			itemElementMap.set(key, details);
-		}
-		else {
-			details.index = index;
-		}
-
-		return v('div', {
+		const node = v('div', {
 			key
 		}, [
 			w<Row>('row', {
@@ -202,6 +291,24 @@ class Body extends BodyBase<BodyProperties> {
 				theme
 			})
 		]);
+		let details = itemElementMap.get(key);
+		if (!details) {
+			details = {
+				add: true,
+				index: index,
+				invalidating: false,
+				key,
+				node,
+				remove: false
+			};
+			intersectionObserver.subscribe(key);
+		}
+		else {
+			details.node = node;
+			details.index = index;
+		}
+
+		return details;
 	}
 
 	/**
@@ -210,11 +317,14 @@ class Body extends BodyBase<BodyProperties> {
 	 * to estimate the number of rows that will fill it
 	 */
 	protected estimatedRowCount(): number {
-		const intersections = this.meta(Intersection);
-		if (
-			(intersections.has('marginTop') && intersections.get('marginTop', 'scroller') > 0) ||
-			(intersections.has('marginBottom') && intersections.get('marginBottom', 'scroller') > 0)
-		) {
+		let margins = false;
+		for (const key in this.visibleKeys()) {
+			if (key.indexOf('margin') === 0) {
+				margins = true;
+				break;
+			}
+		}
+		if (margins) {
 			// we don't know the exact number of visible rows
 			const height = this.meta(Dimensions).get('scroller').size.height;
 			if (height > 0) {
@@ -255,180 +365,79 @@ class Body extends BodyBase<BodyProperties> {
 
 	@diffProperty('scrollTo', shallow)
 	protected diffScrollTo({ scrollTo: previousScrollTo }: BodyProperties, { scrollTo }: BodyProperties) {
-		const {
-			_itemElementMap: itemElementMap,
-			properties: {
-				data: {
-					items = undefined
-				} = {}
-			}
-		} = this;
-
 		if (scrollTo) {
 			this._slice(scrollTo.index);
 		}
 	}
 
 	render(): DNode {
+		console.log('Body.render');
 		const {
 			_itemElementMap: itemElementMap,
 			properties: {
 				bufferRows = 10,
 				data,
-				onScrollToRequest,
-				onSliceRequest,
 				rowDrift = 5
 			}
 		} = this;
-		let {
+		const intersections = this.meta(Intersection);
+
+		let intersectionObserver = this._intersectionObserver;
+		if (!intersectionObserver) {
+			intersectionObserver = this._intersectionObserver = intersections.observe(this._onIntersection.bind(this), {
+				root: 'scroller'
+			});
+		}
+
+		if (data.items && data.items.length === 0) {
+			this._slice(0);
+		}
+
+		const {
 			items,
 			size: {
 				dataLength
 			},
 			slice: {
-				start = 0,
-				count = 0
+				start = 0
 			} = {}
 		} = data;
 		const dimensions = this.meta(Dimensions);
-		const intersections = this.meta(Intersection);
-
-		// If among the visible rows there is a row that should be in the margins
-		// find the first common visible row and use that as a reference
-		// to make a new slice
-
 		const previousKeys = from(itemElementMap.keys());
 		const visibleKeys = this.visibleKeys();
 		const firstVisibleKey = this._firstVisibleKey = (visibleKeys.length ? visibleKeys[0] : '');
 		const lastVisibleKey = (visibleKeys.length ? visibleKeys[visibleKeys.length - 1] : '');
-		if (items.length === 0) {
-			this._slice(0);
-		}
-		else if (visibleKeys.length) {
-			let slice = false;
-			if (previousKeys.indexOf(firstVisibleKey) < rowDrift && start > 0) {
-				slice = true;
-			}
-			if (previousKeys.indexOf(lastVisibleKey) > (items.length - rowDrift) && (start + count) < dataLength) {
-				slice = true;
-			}
-			if (slice) {
-				for (const item of items) {
-					if (includes(visibleKeys, item.id)) {
-						this._slice(item.index);
-						break;
-					}
-				}
-			}
-		}
-		else if (
-			dimensions.has('scroller') &&
-			(
-				(intersections.has('marginTop') && intersections.get('marginTop', 'scroller')) > 0 ||
-				(intersections.has('marginBottom') && intersections.get('marginBottom', 'scroller')) > 0
-			)
-		) {
-			const scroll = dimensions.get('scroller').scroll.top;
-			const detailsEntries = from(itemElementMap.entries());
-			let scrollTo = false;
-			for (const [ itemKey, details ] of detailsEntries) {
-				const offsetTop = dimensions.has(itemKey) ? dimensions.get(itemKey).offset.top : 0;
-				if (offsetTop) {
-					const delta = (offsetTop - scroll);
-					if (delta > 0) {
-						// The top of the rendered data is below the current viewport
-						// so we try to guess how many rows were skipped and jump
-						// down to that area
-						const estimatedRowHeight = this.estimatedRowHeight();
-						const index = Math.max(0, (start - Math.round(delta / estimatedRowHeight)));
-						onScrollToRequest && onScrollToRequest({ index });
-						scrollTo = true;
-					}
-					break;
-				}
-			}
-			if (!scrollTo) {
-				for (const [ itemKey, renderedDetails ] of detailsEntries.reverse()) {
-					const itemDimensions = dimensions.has(itemKey) ? dimensions.get(itemKey) : undefined;
-					if (itemDimensions && itemDimensions.offset.top && itemDimensions.size.height) {
-						const delta = (scroll - itemDimensions.offset.top - itemDimensions.size.height);
-						if (delta > 0) {
-							// The bottom of the rendered data is above the current viewport
-							// so we try to guess how many rows were skipped and jump
-							// down to that area
-							const estimatedRowHeight = this.estimatedRowHeight();
-							const index = Math.min(Math.max(0, dataLength - 1), (start + items.length + Math.round(delta / estimatedRowHeight)));
-							onScrollToRequest && onScrollToRequest({ index });
-						}
-						break;
-					}
-				}
-			}
-		}
+		const updatedElementMap = new Map<string, RenderedDetails>(); // Create a new map so that the items will be ordered correctly
 
-		// Reload data properties
-		({
-			items,
-			size: {
-				dataLength
-			}
-		} = data);
-		if (data.slice) {
-			({
-				start,
-				count
-			} = data.slice);
-		}
 		const children: DNode[] = [];
 
 		// Create a top margin if the data has any offset at all
-		let marginTop = this._marginTop;
-		if (start > 0) {
-			if (!marginTop) {
-				marginTop = this._marginTop = {
-					add: true,
-					remove: false,
-					index: -1
-				};
-			}
-			children.push(v('div', {
-				key: 'marginTop',
-				styles: {
-					height: '10000px'
-				}
-			}));
-			// encountering a margin always triggers an invalidation
-			intersections.watch('marginTop', IntersectionWatchType.WITHIN, 'scroller');
+		for (const details of this._margin('-', start > 0)) {
+			updatedElementMap.set(details.key, details);
+			children.push(details.node);
 		}
-		else if (marginTop) {
-			if (dimensions.has('marginTop')) {
-				marginTop.height = dimensions.get('marginTop').size.height;
-			}
-			marginTop.remove = true;
-		}
+
+		// Keep a map of current keys (item IDs) and items
+		const itemsByKey: { [key: string]: RenderedDetails } = {};
+		const currentKeys: string[] = items.map((item, index) => {
+			const key = item.id;
+			// createNodeFromItem marks this item as having been added
+			// automatically if it didn't exist in the mapping (is new)
+			itemsByKey[key] = this.createNodeFromItem(item);
+			return key;
+		});
 
 		// Detect changes between what we have now and what we will have
 		if (previousKeys.length === 0) {
 			// There were no item rows the last time render was called
 			// so every row is added
 			for (const item of items) {
-				children.push(this.createNodeFromItem(item));
+				const details = this.createNodeFromItem(item);
+				children.push(details.node);
+				details && updatedElementMap.set(item.id, details);
 			}
 		}
 		else {
-			// Create a new map so that the items will be ordered correctly
-			const updatedElementMap = new Map<string, RenderedDetails>();
-
-			// Keep a map of current keys (item IDs) and items
-			const itemsByKey: { [key: string]: DNode } = {};
-			const currentKeys: string[] = items.map((item, index) => {
-				const key = item.id;
-				// createNodeFromItem marks this item as having been added
-				// automatically if it didn't exist in the mapping (is new)
-				itemsByKey[key] = this.createNodeFromItem(item);
-				return key;
-			});
-
 			// find which keys are new and at what index they will appear
 			let cleared = true;
 			let addedKeys: string[] = [];
@@ -455,6 +464,12 @@ class Body extends BodyBase<BodyProperties> {
 
 			// If all keys are new, we can start from scratch
 			if (cleared) {
+				console.log('Body.render cleared');
+				for (const [ itemKey, details ] of from(itemElementMap.entries())) {
+					if (!details.remove) {
+						intersectionObserver.unsubscribe(itemKey);
+					}
+				}
 				itemElementMap.clear();
 				return this.render();
 			}
@@ -462,46 +477,47 @@ class Body extends BodyBase<BodyProperties> {
 			// Use previous keys to watch for deleted items
 			// and insert new keys at the indexes detected above
 			for (let i = 0, il = previousKeys.length; i <= il; i++) {
-				const key = previousKeys[ i ];
+				const key = previousKeys[i];
 
-				const keyPatch = keyPatches[ i ];
+				const keyPatch = keyPatches[i];
 				if (keyPatch) {
 					for (const addedKey of keyPatch) {
 						// Insert any newly introduced items
 						// that were added at this index
-						children.push(itemsByKey[ addedKey ]);
-
-						// Add to the updated element map
-						const update = itemElementMap.get(addedKey);
-						if (update) {
-							updatedElementMap.set(addedKey, update);
-						}
+						const details = itemsByKey[addedKey];
+						children.push(details.node);
+						updatedElementMap.set(addedKey, details);
 					}
 				}
 
 				if (i < il) {
-					const item = itemsByKey[ key ];
-					const details = itemElementMap.get(key);
-					if (item) {
+					if (key.indexOf('margin') === 0) {
+						continue;
+					}
+
+					let details = itemsByKey[key];
+					if (details) {
 						// This item has neither been added nor removed
 						// since the last render
-						children.push(item);
+						children.push(details.node);
 
 						// Add to the updated element map
-						const update = itemElementMap.get(key);
-						if (update) {
-							updatedElementMap.set(key, update);
-						}
+						updatedElementMap.set(key, details);
 					}
-					else if (details) {
+					else if (itemElementMap.has(key)) {
+						details = itemElementMap.get(key)!;
 						// This item was deleted since the last render
 						if (!details.remove && dimensions.has(key)) {
 							// Store its rendered height before it is removed from DOM
 							// as it will not be added as a row in the next render
 							details.height = dimensions.get(key).size.height;
 						}
-						// Mark this item as having been deleted
-						details.remove = true;
+
+						// Mark this item as having been removed
+						if (!details.remove) {
+							intersectionObserver.unsubscribe(key);
+							details.remove = true;
+						}
 
 						// Add to the updated element map.
 						// This entry will be deleted once its size
@@ -513,40 +529,32 @@ class Body extends BodyBase<BodyProperties> {
 					}
 				}
 			}
-
-			// Store the updated item map
-			this._itemElementMap = updatedElementMap;
 		}
+
+		// Create a bottom margin if the data doesn't extend all the way to the end
+		for (const details of this._margin('+', (start + items.length) < (dataLength - 1))) {
+			updatedElementMap.set(details.key, details);
+			children.push(details.node);
+		}
+
+		// Store the updated item map
+		this._itemElementMap = updatedElementMap;
 
 		// If start is 0 (we're at the beginning of the data set)
 		// then our minimum index doesn't need to be triggered.
 		// If start + count is dataLength (we're at the end of the data set)
 		// then our maximum index doesn't need to be triggered.
-		const minIndex = (start === 0 ? 0 : bufferRows - rowDrift);
-		const maxIndex = (start + count === dataLength ? dataLength : items.length - bufferRows + rowDrift);
-		for (let i = 0, item; (item = items[i]); i++) {
-			if (i < minIndex || i > maxIndex) {
-				// Mark all rows that are [bufferRows] outside the
-				// visible area as invalidating as soon as they are within it
-				intersections.watch(item.id, IntersectionWatchType.WITHIN, 'scroller');
+		const minIndex = (bufferRows - rowDrift);
+		const maxIndex = (currentKeys.length - bufferRows + rowDrift);
+		console.log('Body.render visible', visibleKeys.length, visibleKeys.join(','));
+		console.log('Body.render previous sentinel', currentKeys[minIndex - 1]);
+		console.log('Body.render next sentinel', currentKeys[maxIndex + 1]);
+		for (const [ itemKey, details ] of from(this._itemElementMap.entries())) {
+			if (itemKey.indexOf('margin') === 0) {
+				continue;
 			}
-			else {
-				// Rows within boundaries
-				// never trigger an invalidation
-				intersections.watch(item.id, IntersectionWatchType.NEVER, 'scroller');
-			}
-		}
-
-		// Create a bottom margin if the data doesn't extend all the way to the end
-		if (start + items.length < (dataLength - 1)) {
-			children.push(v('div', {
-				key: 'marginBottom',
-				styles: {
-					height: ('10000px')
-				}
-			}));
-			// encountering a margin always triggers an invalidation
-			intersections.watch('marginBottom', IntersectionWatchType.WITHIN, 'scroller');
+			const index = currentKeys.indexOf(itemKey);
+			details.invalidating = (index < minIndex || index > maxIndex);
 		}
 
 		this._scrollTop = dimensions.has('scroller') ? dimensions.get('scroller').scroll.top : 0;
@@ -560,13 +568,14 @@ class Body extends BodyBase<BodyProperties> {
 
 	protected visibleKeys() {
 		const {
+			_intersectionObserver: intersectionObserver,
 			_itemElementMap: itemElementMap
 		} = this;
 
 		const intersections = this.meta(Intersection);
 		const visible: string[] = [];
 		for (const [ key, details ] of from(itemElementMap.entries())) {
-			if (intersections.has(key) && intersections.get(key, 'scroller') > 0) {
+			if (intersections.has(key, intersectionObserver) && intersections.get(key, intersectionObserver) > 0) {
 				visible.push(key);
 			}
 		}

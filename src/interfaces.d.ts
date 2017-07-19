@@ -121,7 +121,7 @@ export interface ScrollToDetails {
 }
 
 export interface ScrollToCompleteListener {
-	(scrollTo: ScrollToDetails): void;
+	(scrollTo?: ScrollToDetails): void;
 }
 
 export interface ScrollToRequestListener {
