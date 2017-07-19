@@ -20,6 +20,7 @@ export interface BodyProperties extends ThemeableProperties, HasBufferRows, HasC
 
 interface RenderedDetails {
 	add: boolean;
+	fixedHeight?: number;
 	height?: number;
 	index: number;
 	invalidating: boolean;
@@ -161,10 +162,6 @@ class Body extends BodyBase<BodyProperties> {
 
 		if (cleared) {
 			console.log('Body._scrollTopCallback cleared');
-			if (!scrollTo) {
-				scrollTop = dimensions.has('marginTop') ? dimensions.get('marginTop').size.height : 0;
-			}
-
 			// mark nodes as having been factored into scroll calculations
 			for (const [ , details ] of detailsEntries) {
 				details.add = false;
@@ -187,9 +184,14 @@ class Body extends BodyBase<BodyProperties> {
 
 				if (beforeVisible) {
 					// Track size changed of rows before the first visible row
-					if (details.add && dimensions.has(itemKey)) {
+					if (details.add) {
 						// added items increase scrollTop
-						scrollTop += dimensions.get(itemKey).size.height;
+						if (details.fixedHeight) {
+							scrollTop += details.fixedHeight;
+						}
+						else if (dimensions.has(itemKey)) {
+							scrollTop += dimensions.get(itemKey).size.height;
+						}
 					}
 					if (details.remove) {
 						// removed items decrease scrollTop
@@ -354,7 +356,14 @@ class Body extends BodyBase<BodyProperties> {
 		let rowHeight = 0;
 		let rowCount = 0;
 		for (const [ key, details ] of from(itemElementMap.entries())) {
-			if (dimensions.has(key)) {
+			if (key.indexOf('margin') === 0) {
+				continue;
+			}
+			if (details.fixedHeight) {
+				rowHeight += details.fixedHeight;
+				rowCount++;
+			}
+			else if (dimensions.has(key)) {
 				rowHeight += dimensions.get(key).size.height;
 				rowCount++;
 			}
@@ -507,10 +516,12 @@ class Body extends BodyBase<BodyProperties> {
 					else if (itemElementMap.has(key)) {
 						details = itemElementMap.get(key)!;
 						// This item was deleted since the last render
-						if (!details.remove && dimensions.has(key)) {
+						if (!details.remove) {
 							// Store its rendered height before it is removed from DOM
 							// as it will not be added as a row in the next render
-							details.height = dimensions.get(key).size.height;
+							if (!details.fixedHeight && dimensions.has(key)) {
+								details.height = dimensions.get(key).size.height;
+							}
 						}
 
 						// Mark this item as having been removed
