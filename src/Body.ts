@@ -1,14 +1,14 @@
-import global from '@dojo/core/global';
 import { from, includes } from '@dojo/shim/array';
 import Map from '@dojo/shim/Map';
 import { v, w } from '@dojo/widget-core/d';
 import { shallow } from '@dojo/widget-core/diff';
 import { DNode } from '@dojo/widget-core/interfaces';
 import { Dimensions } from '@dojo/widget-core/meta/Dimensions';
-import { Intersection, IntersectionMetaCallback, IntersectionMetaObserver, IntersectionMetaEntry } from '@dojo/widget-core/meta/Intersection';
+import MetaWithOptions from '@dojo/widget-core/meta/MetaWithOptions';
+import { Intersection } from '@dojo/widget-core/meta/Intersection';
 import { RegistryMixin, RegistryMixinProperties } from '@dojo/widget-core/mixins/Registry';
 import { theme, ThemeableMixin, ThemeableProperties } from '@dojo/widget-core/mixins/Themeable';
-import WidgetBase, { diffProperty } from '@dojo/widget-core/WidgetBase';
+import WidgetBase, { diffProperty, meta } from '@dojo/widget-core/WidgetBase';
 import { HasBufferRows, HasColumns, HasData, HasScrollTo, HasScrollToEvent, HasSliceEvent, ItemProperties } from './interfaces';
 import Row from './Row';
 
@@ -18,7 +18,7 @@ export const BodyBase = ThemeableMixin(RegistryMixin(WidgetBase));
 
 export interface BodyProperties extends ThemeableProperties, HasBufferRows, HasColumns, HasData, HasScrollTo, HasScrollToEvent, HasSliceEvent, RegistryMixinProperties {}
 
-interface RenderedDetails {
+export interface RenderedDetails {
 	add: boolean;
 	fixedHeight?: number;
 	height?: number;
@@ -29,16 +29,23 @@ interface RenderedDetails {
 	remove: boolean;
 }
 
+const ScrollerIntersectionMeta = MetaWithOptions(Intersection, {
+	root: 'scroller'
+});
+
+const log = false;
+
 @theme(css)
 class Body extends BodyBase<BodyProperties> {
 	private _firstVisibleKey: string;
 	private _itemElementMap = new Map<string, RenderedDetails>();
-	private _intersectionObserver: IntersectionMetaObserver;
+	private _intersections = this.meta(ScrollerIntersectionMeta);
 	private _scrollTop = 0;
 
-	private _onIntersection(entries: IntersectionMetaEntry[], observer: IntersectionMetaObserver) {
+	@meta(ScrollerIntersectionMeta, meta.ALL_KEYS)
+	private _onIntersection(entries: Map<string, number>) {
 		const {
-			_intersectionObserver: intersectionObserver,
+			_intersections: intersections,
 			_itemElementMap: itemElementMap,
 			properties: {
 				data: {
@@ -56,9 +63,9 @@ class Body extends BodyBase<BodyProperties> {
 		} = this;
 
 		let invalidating = false;
-		for (const entry of entries) {
-			if (entry.intersectionRatio > 0) {
-				const details = this._itemElementMap.get(entry.key);
+		for (const [ key, intersectionRatio ] of from(entries.entries())) {
+			if (intersectionRatio > 0) {
+				const details = this._itemElementMap.get(key);
 				if (details && details.invalidating) {
 					invalidating = true;
 					break;
@@ -67,12 +74,11 @@ class Body extends BodyBase<BodyProperties> {
 		}
 		if (invalidating) {
 			let sliced = false;
-			const dimensions = this.meta(Dimensions);
 			const visibleKeys = this.visibleKeys();
 			if (visibleKeys.length) {
 				for (const item of items) {
 					if (includes(visibleKeys, item.id)) {
-						console.log('Body._onIntersection visible', item.id);
+						log && console.log('Body._onIntersection visible', item.id);
 						this._slice(item.index);
 						sliced = true;
 						break;
@@ -80,17 +86,17 @@ class Body extends BodyBase<BodyProperties> {
 				}
 			}
 			if (!sliced) {
-				// TODO: Use intersectionRatio with a large number of thresholds to find the offset
+				// TODO: Use intersectionRatio with a large number of margin thresholds to find the offset
 				for (const key of visibleKeys) {
 					const match = key.match(/^margin([+\-])(\d+)$/);
 					if (match) {
-						const offset = Math.round((parseInt(match[2], 10) * 100) / this.estimatedRowHeight());
+						const offset = Math.ceil((parseInt(match[2], 10) * 100) / this.estimatedRowHeight());
 						if (match[1] === '-') {
-							console.log('Body._onIntersection margin', match[1] + match[2], start - offset);
+							log && console.log('Body._onIntersection margin', match[1] + match[2], start - offset);
 							onScrollToRequest && onScrollToRequest({ index: (start - offset) });
 						}
 						else if (match[1] === '+') {
-							console.log('Body._onIntersection margin', match[1] + match[2], start + count + offset);
+							log && console.log('Body._onIntersection margin', match[1] + match[2], start + count + offset);
 							onScrollToRequest && onScrollToRequest({ index: (start + count + offset) });
 						}
 						sliced = true;
@@ -99,7 +105,7 @@ class Body extends BodyBase<BodyProperties> {
 				}
 			}
 			if (!sliced) {
-				console.log('Body._onIntersection not sliced');
+				log && console.log('Body._onIntersection not sliced');
 			}
 		}
 	}
@@ -126,10 +132,7 @@ class Body extends BodyBase<BodyProperties> {
 		// Use the start value we found and request an amount of data
 		// equal to the additional data above the scroll area, the number
 		// of visible rows and the additional data below the scroll area
-		if (sliceCount > 100) {
-			debugger;
-		}
-		console.log('_slice(' + start + ', ' + count + ') => onSliceRequest(' + sliceStart + ', ' + sliceCount + ')');
+		log && console.log('_slice(' + start + ', ' + count + ') => onSliceRequest(' + sliceStart + ', ' + sliceCount + ')');
 		onSliceRequest && onSliceRequest({ start: sliceStart, count: sliceCount });
 	}
 
@@ -148,6 +151,8 @@ class Body extends BodyBase<BodyProperties> {
 
 		let scrollTop = this._scrollTop;
 
+		log && console.log('Body._scrollTopCallback started', scrollTop);
+
 		// Check to see if all items are new
 		let cleared = true;
 		for (const [ itemKey, details] of detailsEntries) {
@@ -161,14 +166,14 @@ class Body extends BodyBase<BodyProperties> {
 		}
 
 		if (cleared) {
-			console.log('Body._scrollTopCallback cleared');
+			log && console.log('Body._scrollTopCallback cleared');
 			// mark nodes as having been factored into scroll calculations
 			for (const [ , details ] of detailsEntries) {
 				details.add = false;
 			}
 		}
 		else if (scrollTo && foundScrollTo) {
-			console.log('Body._scrollTo', scrollTop);
+			log && console.log('Body._scrollTopCallback scrollTo', scrollTop);
 			// mark nodes as having been factored into scroll calculations
 			for (const [ , details ] of detailsEntries) {
 				details.add = false;
@@ -211,14 +216,14 @@ class Body extends BodyBase<BodyProperties> {
 			onScrollToComplete(foundScrollTo ? scrollTo : undefined);
 		}
 
-		console.log('Body._onScrollTopCallback', scrollTop);
+		log && console.log('Body._scrollTopCallback returning', scrollTop);
 
 		return scrollTop;
 	}
 
 	private _margin(type: '-' | '+', exists: boolean): RenderedDetails[] {
 		const {
-			_intersectionObserver: intersectionObserver,
+			_intersections: intersections,
 			_itemElementMap: itemElementMap
 		} = this;
 
@@ -245,16 +250,12 @@ class Body extends BodyBase<BodyProperties> {
 						node,
 						remove: false
 					};
-					intersectionObserver.subscribe(key);
 				}
 				rows.push(details);
 			}
 			else if (details) {
 				delete details.node;
-				if (!details.remove) {
-					details.remove = true;
-					intersectionObserver.unsubscribe(key);
-				}
+				details.remove = true;
 				rows.push(details);
 			}
 		}
@@ -269,7 +270,7 @@ class Body extends BodyBase<BodyProperties> {
 	 */
 	protected createNodeFromItem(item: ItemProperties): RenderedDetails {
 		const {
-			_intersectionObserver: intersectionObserver,
+			_intersections: intersections,
 			_itemElementMap: itemElementMap,
 			properties: {
 				columns,
@@ -303,7 +304,6 @@ class Body extends BodyBase<BodyProperties> {
 				node,
 				remove: false
 			};
-			intersectionObserver.subscribe(key);
 		}
 		else {
 			details.node = node;
@@ -380,8 +380,9 @@ class Body extends BodyBase<BodyProperties> {
 	}
 
 	render(): DNode {
-		console.log('Body.render');
+		log && console.log('Body.render');
 		const {
+			_intersections: intersections,
 			_itemElementMap: itemElementMap,
 			properties: {
 				bufferRows = 10,
@@ -389,14 +390,6 @@ class Body extends BodyBase<BodyProperties> {
 				rowDrift = 5
 			}
 		} = this;
-		const intersections = this.meta(Intersection);
-
-		let intersectionObserver = this._intersectionObserver;
-		if (!intersectionObserver) {
-			intersectionObserver = this._intersectionObserver = intersections.observe(this._onIntersection.bind(this), {
-				root: 'scroller'
-			});
-		}
 
 		if (data.items && data.items.length === 0) {
 			this._slice(0);
@@ -414,8 +407,7 @@ class Body extends BodyBase<BodyProperties> {
 		const dimensions = this.meta(Dimensions);
 		const previousKeys = from(itemElementMap.keys());
 		const visibleKeys = this.visibleKeys();
-		const firstVisibleKey = this._firstVisibleKey = (visibleKeys.length ? visibleKeys[0] : '');
-		const lastVisibleKey = (visibleKeys.length ? visibleKeys[visibleKeys.length - 1] : '');
+		this._firstVisibleKey = (visibleKeys.length ? visibleKeys[0] : '');
 		const updatedElementMap = new Map<string, RenderedDetails>(); // Create a new map so that the items will be ordered correctly
 
 		const children: DNode[] = [];
@@ -473,12 +465,7 @@ class Body extends BodyBase<BodyProperties> {
 
 			// If all keys are new, we can start from scratch
 			if (cleared) {
-				console.log('Body.render cleared');
-				for (const [ itemKey, details ] of from(itemElementMap.entries())) {
-					if (!details.remove) {
-						intersectionObserver.unsubscribe(itemKey);
-					}
-				}
+				log && console.log('Body.render cleared');
 				itemElementMap.clear();
 				return this.render();
 			}
@@ -525,10 +512,7 @@ class Body extends BodyBase<BodyProperties> {
 						}
 
 						// Mark this item as having been removed
-						if (!details.remove) {
-							intersectionObserver.unsubscribe(key);
-							details.remove = true;
-						}
+						details.remove = true;
 
 						// Add to the updated element map.
 						// This entry will be deleted once its size
@@ -555,11 +539,11 @@ class Body extends BodyBase<BodyProperties> {
 		// then our minimum index doesn't need to be triggered.
 		// If start + count is dataLength (we're at the end of the data set)
 		// then our maximum index doesn't need to be triggered.
-		const minIndex = (bufferRows - rowDrift);
+		const minIndex = (start === 0) ? 0 : (bufferRows - rowDrift);
 		const maxIndex = (currentKeys.length - bufferRows + rowDrift);
-		console.log('Body.render visible', visibleKeys.length, visibleKeys.join(','));
-		console.log('Body.render previous sentinel', currentKeys[minIndex - 1]);
-		console.log('Body.render next sentinel', currentKeys[maxIndex + 1]);
+		log && console.log('Body.render visible', visibleKeys.length, visibleKeys.join(','));
+		log && console.log('Body.render previous sentinel', currentKeys[minIndex - 1]);
+		log && console.log('Body.render next sentinel', currentKeys[maxIndex + 1]);
 		for (const [ itemKey, details ] of from(this._itemElementMap.entries())) {
 			if (itemKey.indexOf('margin') === 0) {
 				continue;
@@ -569,6 +553,7 @@ class Body extends BodyBase<BodyProperties> {
 		}
 
 		this._scrollTop = dimensions.has('scroller') ? dimensions.get('scroller').scroll.top : 0;
+		log && console.log('Body.render scrollTop', this._scrollTop);
 
 		return v('div', {
 			classes: this.classes(css.scroller),
@@ -579,14 +564,13 @@ class Body extends BodyBase<BodyProperties> {
 
 	protected visibleKeys() {
 		const {
-			_intersectionObserver: intersectionObserver,
+			_intersections: intersections,
 			_itemElementMap: itemElementMap
 		} = this;
 
-		const intersections = this.meta(Intersection);
 		const visible: string[] = [];
 		for (const [ key, details ] of from(itemElementMap.entries())) {
-			if (intersections.has(key, intersectionObserver) && intersections.get(key, intersectionObserver) > 0) {
+			if (intersections.has(key) && intersections.get(key) > 0) {
 				visible.push(key);
 			}
 		}
